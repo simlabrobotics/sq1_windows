@@ -26,7 +26,6 @@ int recvNum = 0;
 int sendNum = 0;
 double statTime = -1.0;
 
-
 /////////////////////////////////////////////////////////////////////////////////////////
 // functions declarations
 void PrintInstruction();
@@ -35,12 +34,10 @@ bool OpenCAN();
 void CloseCAN();
 extern int getPCANChannelIndex(const char* cname);
 
-
 /////////////////////////////////////////////////////////////////////////////////////////
 // CAN communication thread
 static unsigned int __stdcall ioThreadProc(void* inst)
 {
-	char id_des;
 	char id_cmd;
 	char id_src;
 	int len;
@@ -50,7 +47,7 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 
 	while (ioThreadRun)
 	{
-		while (0 == get_message(CAN_Ch, &id_cmd, &id_src, &id_des, &len, data, FALSE))
+		while (0 == get_message(CAN_Ch, &id_cmd, &id_src, &len, data, FALSE))
 		{
 			switch (id_cmd)
 			{
@@ -147,7 +144,6 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 	return 0;
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////
 // Application main-loop. It handles the keyboard events
 void MainLoop()
@@ -160,51 +156,6 @@ void MainLoop()
 		if (!_kbhit())
 		{
 			Sleep(5);
-			/*if (pSHM)
-			{
-				switch (pSHM->cmd.command)
-				{
-				case CMD_SERVO_ON:
-					break;
-				case CMD_SERVO_OFF:
-					if (pBHand) pBHand->SetMotionType(eMotionType_NONE);
-					break;
-				case CMD_CMD_1:
-					if (pBHand) pBHand->SetMotionType(eMotionType_HOME);
-					break;
-				case CMD_CMD_2:
-					if (pBHand) pBHand->SetMotionType(eMotionType_READY);
-					break;
-				case CMD_CMD_3:
-					if (pBHand) pBHand->SetMotionType(eMotionType_GRASP_3);
-					break;
-				case CMD_CMD_4:
-					if (pBHand) pBHand->SetMotionType(eMotionType_GRASP_4);
-					break;
-				case CMD_CMD_5:
-					if (pBHand) pBHand->SetMotionType(eMotionType_PINCH_IT);
-					break;
-				case CMD_CMD_6:
-					if (pBHand) pBHand->SetMotionType(eMotionType_PINCH_MT);
-					break;
-				case CMD_CMD_7:
-					if (pBHand) pBHand->SetMotionType(eMotionType_ENVELOP);
-					break;
-				case CMD_CMD_8:
-					if (pBHand) pBHand->SetMotionType(eMotionType_GRAVITY_COMP);
-					break;
-				case CMD_EXIT:
-					bRun = false;
-					break;
-				}
-				pSHM->cmd.command = CMD_NULL;
-				for (i=0; i<MAX_DOF; i++)
-				{
-					pSHM->state.slave_state[i].position = q[i];
-					pSHM->cmd.slave_command[i].torque = tau_des[i];
-				}
-				pSHM->state.time = curTime;
-			}*/
 		}
 		else
 		{
@@ -218,7 +169,6 @@ void MainLoop()
 		}
 	}
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Open a CAN data channel
@@ -317,11 +267,12 @@ void CloseCAN()
 void PrintInstruction()
 {
 	printf("--------------------------------------------------\n");
-	printf("enum devices: \n");
+	printf("enum devices: \n\n");
+
+	printf("Keyboard Commands:\n");
+	printf("Q: Quit this program\n");
 	printf("--------------------------------------------------\n\n");
 }
-
-
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Program main
@@ -336,10 +287,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	// switch all slaves to Configuration mode:
 	lss_switch_mode(CAN_Ch, 0x01);
 
-	// LSS identify remote slaves
+	// LSS identify remote slaves:
+	Sleep(1000);
 
 	// switch all slaves to Operation mode:
 	lss_switch_mode(CAN_Ch, 0x00);
+
+	// loop wait user input:
+	MainLoop();
 
 	// close CAN channel:
 	CloseCAN();

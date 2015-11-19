@@ -49,7 +49,7 @@ int command_can_stop(int ch);
 
 int write_current(int ch, int findex, short* pwm);
 
-int get_message(int ch, char* cmd, char* src, char* des, int* len, unsigned char* data, int blocking);
+int get_message(int ch, char* cmd, char* src, int* len, unsigned char* data, int blocking);
 
 int lss_switch_mode(int ch, unsigned char mode);
 

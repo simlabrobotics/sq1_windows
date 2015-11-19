@@ -1,4 +1,4 @@
-set( name canopen_SDI )
+set( name canopen_SDO )
 
 
 # import 3rdparty:

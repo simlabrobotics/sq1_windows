@@ -318,16 +318,27 @@ int command_can_close(int ch)
 	return 0; // PCAN_ERROR_OK
 }
 
+#define COB_ID(fn_code, node_id) ((unsigned short)(fn_code<<7 | node_id))
+#define FN_CODE(cob_id) ((cob_id>>7) & 0x0f)
+#define NODE_ID(cob_id) (cob_id & 0x7f)
+
 int command_can_query_id(int ch)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
 
-	/*long Txid;
+	long Txid;
 	unsigned char data[8];
 	int ret;
 
-	Txid = ((unsigned long)ID_CMD_QUERY_ID<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	ret = canSendMsg(ch, Txid, 0, data, TRUE);*/
+	Txid = COB_ID(0x0c , 0x01);
+	data[0] = (0x02<<5); // Initiate SDO upload service
+//	data[1] = 0x00; // Index (LO)
+//	data[2] = 0x10; // Index (HI)
+	data[1] = 0x18; // Index (LO)
+	data[2] = 0x10; // Index (HI)
+	data[3] = 0x01; // Sub-index
+
+	ret = canSendMsg(ch, Txid, 8, data, TRUE);
 
 	return 0;
 }
@@ -421,7 +432,7 @@ int write_current(int ch, int findex, short* pwm)
 	return 0;
 }
 
-int get_message(int ch, char* cmd, char* src, char* des, int* len, unsigned char* data, int blocking)
+int get_message(int ch, char* cmd, char* src, int* len, unsigned char* data, int blocking)
 {
 	int err;
 	unsigned long Rxid;
@@ -429,13 +440,12 @@ int get_message(int ch, char* cmd, char* src, char* des, int* len, unsigned char
 	err = canReadMsg(ch, (int*)&Rxid, len, data, blocking);
 	if (!err)
 	{
-		/*printf("    %ld+%ld (%d)", Rxid-Rxid%128, Rxid%128, len);
-		for(int nd=0; nd<(*len); nd++) printf(" %3d ", data[nd]);
-		printf("\n");*/
+		printf("    %04xh (node=%xh, len=%d)", Rxid, NODE_ID(Rxid), *len);
+		for(int nd=0; nd<(*len); nd++) printf(" %02xh ", data[nd]);
+		printf("\n");
 
-		*cmd = (char)( (Rxid >> 6) & 0x1f );
-		*des = (char)( (Rxid >> 3) & 0x07 );
-		*src = (char)( Rxid & 0x07);
+		*cmd = (char)( (Rxid >> 7) & 0x0f );
+		*src = (char)( Rxid & 0x7f);
 	}
 	else
 	{

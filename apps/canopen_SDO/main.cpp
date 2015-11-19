@@ -53,7 +53,6 @@ void MotionWalk();
 // CAN communication thread
 static unsigned int __stdcall ioThreadProc(void* inst)
 {
-	char id_des;
 	char id_cmd;
 	char id_src;
 	int len;
@@ -63,7 +62,7 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 
 	while (ioThreadRun)
 	{
-		while (0 == get_message(CAN_Ch, &id_cmd, &id_src, &id_des, &len, data, FALSE))
+		while (0 == get_message(CAN_Ch, &id_cmd, &id_src, &len, data, FALSE))
 		{
 			switch (id_cmd)
 			{
