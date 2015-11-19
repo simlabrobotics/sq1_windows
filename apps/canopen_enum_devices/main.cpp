@@ -334,11 +334,12 @@ int _tmain(int argc, _TCHAR* argv[])
 		return -1;
 
 	// switch all slaves to Configuration mode:
+	lss_switch_mode(CAN_Ch, 0x01);
 
 	// LSS identify remote slaves
 
 	// switch all slaves to Operation mode:
-
+	lss_switch_mode(CAN_Ch, 0x00);
 
 	// close CAN channel:
 	CloseCAN();

@@ -51,6 +51,9 @@ int write_current(int ch, int findex, short* pwm);
 
 int get_message(int ch, char* cmd, char* src, char* des, int* len, unsigned char* data, int blocking);
 
+int lss_switch_mode(int ch, unsigned char mode);
+
+
 CANAPI_END
 
 #endif

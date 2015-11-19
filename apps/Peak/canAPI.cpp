@@ -444,6 +444,21 @@ int get_message(int ch, char* cmd, char* src, char* des, int* len, unsigned char
 	return 0;
 }
 
+int lss_switch_mode(int ch, unsigned char mode)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
 
+	long Txid;
+	unsigned char data[8];
+	int ret;
+
+	data[0] = (unsigned char)(0x04);
+	data[1] = (unsigned char)(mode);
+
+	Txid = 0x7E5;
+	ret = canSendMsg(ch, Txid, 8, data, TRUE);
+	
+	return 0;
+}
 
 CANAPI_END
