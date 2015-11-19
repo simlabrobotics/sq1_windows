@@ -1,4 +1,4 @@
-set( name canopen_TxPDO )
+set( name canopen_SDI )
 
 
 # import 3rdparty:

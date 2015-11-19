@@ -1,4 +1,4 @@
-set( name canopen_TxPDO )
+set( name canopen_enum_devices )
 
 
 # import 3rdparty:
