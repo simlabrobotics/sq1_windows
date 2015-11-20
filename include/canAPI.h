@@ -53,7 +53,7 @@ int can_pdo_map(int ch, unsigned char node_id);
 int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned short opmode);
 int can_servo_on(int ch, unsigned char node_id);
 int can_servo_off(int ch, unsigned char node_id);
-int can_query_object(int ch, unsigned char node_id, unsigned short obj_id, unsigned char sub_index);  // send single SDO query
+int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index);  // send single SDO query
 int can_write_PT(int ch, unsigned char node_id, unsigned short position);
 int can_get_message(int ch, unsigned char* fn_code, unsigned char* node_id, int* len, unsigned char* data, int blocking);
 int can_store_params(int ch, unsigned char node_id);

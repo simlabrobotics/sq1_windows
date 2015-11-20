@@ -341,7 +341,7 @@ int can_servo_off(int ch, unsigned char node_id)
 {
 	return 0;
 }
-int can_query_object(int ch, unsigned char node_id, unsigned short obj_id, unsigned char sub_index)
+int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
 
@@ -351,8 +351,8 @@ int can_query_object(int ch, unsigned char node_id, unsigned short obj_id, unsig
 	
 	Txid = COB_ID(COBTYPE_RxSDO , node_id);
 	data[0] = (0x02<<5); // Initiate SDO upload service
-	data[1] = LOBYTE(obj_id); // Index (LO)
-	data[2] = HIBYTE(obj_id); // Index (HI)
+	data[1] = LOBYTE(obj_index); // Index (LO)
+	data[2] = HIBYTE(obj_index); // Index (HI)
 	data[3] = sub_index; // Sub-index
 	data[4] = 0x00; // reserved. must be 0.
 	data[5] = 0x00; // reserved. must be 0.

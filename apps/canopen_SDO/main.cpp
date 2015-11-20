@@ -41,7 +41,8 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 {
 	unsigned char fn_type;
 	unsigned char node_id;
-	unsigned short obj_id;
+	unsigned short obj_index;
+	unsigned char sub_index;
 	int len;
 	unsigned char data[8];
 	unsigned char data_return = 0;
@@ -61,46 +62,58 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 					unsigned char size_indicator= ((data[0] & 0x01) >> 0);
 					printf("\tscs=%d, num_of_bytes=%d, tx_type=%d, size_indicator=%d\n", scs, num_of_bytes, tx_type, size_indicator);
 
-					obj_id = MAKEWORD(data[1], data[2]);
-					switch (obj_id)
+					obj_index = MAKEWORD(data[1], data[2]);
+					sub_index = data[3];
+
+					if (data[0] = 0x80/*scs == 0x04*/) // abort SDO transfer with error
 					{
-					case OD_CANCTL_TYPE:
+						printf("\tSDO transfer is aborted with error.\n");
+						printf("\terror class = %d\n", MAKEWORD(data[6], data[7]));
+						printf("\terror code = %d\n", data[5]);
+						printf("\tadditional code = %d\n", data[4]);
+					}
+					else
+					{
+						switch (obj_index)
 						{
-							printf("\tdevice profile number = %d\n", MAKEWORD(data[6], data[7]));
-							printf("\tnumber of SDOs supported = %d\n", MAKEWORD(data[4], data[5]));
-						}
-						break;
-					case OD_MANUFACTURER_DEVICE_NAME:
-						{
-							printf("\tdevice name = %c%c%c%c\n", data[4], data[5], data[6], data[7]);
-						}
-						break;
-					case OD_HW_VERSION:
-						{
-							printf("\thw version = %c%c%c%c\n", data[4], data[5], data[6], data[7]);
-						}
-						break;
-					case OD_SW_VERSION:
-						{
-							printf("\tsw version = %c%c%c%c\n", data[4], data[5], data[6], data[7]);
-						}
-						break;
-					case OD_NODEID:
-						{
-							printf("\tnode id = %d\n", data[4]);
-						}
-						break;
-					case OD_LSS_ADDRESS:
-						{
-							switch (data[3])
+						case OD_CANCTL_TYPE:
 							{
-							case 1: printf("\tvendor id = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
-							case 2: printf("\tproduct id = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
-							case 3: printf("\trevision number = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
-							case 4: printf("\tserial number = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
+								printf("\tdevice profile number = %d\n", MAKEWORD(data[6], data[7]));
+								printf("\tnumber of SDOs supported = %d\n", MAKEWORD(data[4], data[5]));
 							}
+							break;
+						case OD_MANUFACTURER_DEVICE_NAME:
+							{
+								printf("\tdevice name = %c%c%c%c\n", data[4], data[5], data[6], data[7]);
+							}
+							break;
+						case OD_HW_VERSION:
+							{
+								printf("\thw version = %c%c%c%c\n", data[4], data[5], data[6], data[7]);
+							}
+							break;
+						case OD_SW_VERSION:
+							{
+								printf("\tsw version = %c%c%c%c\n", data[4], data[5], data[6], data[7]);
+							}
+							break;
+						case OD_NODEID:
+							{
+								printf("\tnode id = %d\n", data[4]);
+							}
+							break;
+						case OD_LSS_ADDRESS:
+							{
+								switch (sub_index)
+								{
+								case 1: printf("\tvendor id = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
+								case 2: printf("\tproduct id = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
+								case 3: printf("\trevision number = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
+								case 4: printf("\tserial number = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
+								}
+							}
+							break;
 						}
-						break;
 					}
 				}
 				break;
