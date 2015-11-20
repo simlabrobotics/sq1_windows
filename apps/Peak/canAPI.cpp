@@ -150,8 +150,8 @@ int getPCANChannelIndex(const char* cname)
 /*==========================================*/
 /*       Private functions prototypes       */
 /*==========================================*/
-int canReadMsg(int bus, int *id, int *len, unsigned char *data, int blocking);
-int canSendMsg(int bus, int id, char len, unsigned char *data, int blocking);
+int canReadMsg(int bus, unsigned long& id, unsigned char& len, unsigned char *data, bool blocking);
+int canSendMsg(int bus, unsigned long id, unsigned char len, unsigned char *data, bool /*blocking*/);
 
 /*========================================*/
 /*       Public functions (CAN API)       */
@@ -214,7 +214,8 @@ int freeCAN(int bus){
 	return 0; // PCAN_ERROR_OK
 }
 
-int canReadMsg(int bus, int *id, int *len, unsigned char *data, int blocking){
+int canReadMsg(int bus, unsigned long& id, unsigned char& len, unsigned char *data, bool blocking) 
+{
 	TPCANMsg CANMsg;
 	TPCANTimestamp CANTimeStamp;
 	TPCANStatus Status = PCAN_ERROR_OK;
@@ -223,28 +224,35 @@ int canReadMsg(int bus, int *id, int *len, unsigned char *data, int blocking){
 
 	// We execute the "Read" function of the PCANBasic                
 	//
-	Status = CAN_Read(canDev[bus], &CANMsg, &CANTimeStamp);
+	do {
+
+		Status = CAN_Read(canDev[bus], &CANMsg, &CANTimeStamp);
 	
-	if (Status != PCAN_ERROR_OK)
-	{
-		if (Status != PCAN_ERROR_QRCVEMPTY)
-		{
-			CAN_GetErrorText(Status, 0, strMsg);
-			printf("canReadMsg(): CAN_Read() failed with error %ld\n", Status);
-			printf("%s\n", strMsg);
+		if (Status != PCAN_ERROR_OK) {
+			if (Status != PCAN_ERROR_QRCVEMPTY) {
+				CAN_GetErrorText(Status, 0, strMsg);
+				printf("canReadMsg(): CAN_Read() failed with error %ld\n", Status);
+				printf("%s\n", strMsg);
+				return Status;
+			}
+			else {
+				Sleep(1);
+			}
 		}
-		return Status;
-	}
+		else {
+			id = CANMsg.ID;
+			len = CANMsg.LEN;
+			for(i = 0; i < CANMsg.LEN; i++)
+				data[i] = CANMsg.DATA[i];
+		}
 
-	*id = CANMsg.ID;
-	*len = CANMsg.LEN;
-	for(i = 0; i < CANMsg.LEN; i++)
-		data[i] = CANMsg.DATA[i];
+	} while (blocking && Status != PCAN_ERROR_OK);
 
-	return 0;
+	return Status;
 }
 
-int canSendMsg(int bus, int id, char len, unsigned char *data, int blocking){
+int canSendMsg(int bus, unsigned long id, unsigned char len, unsigned char *data, bool /*blocking*/) 
+{
 	TPCANMsg CANMsg;
 	TPCANStatus Status = PCAN_ERROR_OK;
 	char strMsg[256];
@@ -313,6 +321,80 @@ int can_close(int ch)
 	printf("\t- Done\n");
 	return 0; // PCAN_ERROR_OK
 }
+
+int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char& rx_len, unsigned char* rx_data)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	unsigned long Txid;
+	unsigned char data[8];
+	unsigned long Rxid;
+	unsigned char rx_fn_code; 
+	unsigned char rx_node_id; 
+	//unsigned short rx_obj_index;
+	//unsigned char rx_sub_index;
+	int err;
+	
+	Txid = COB_ID(COBTYPE_RxSDO , node_id);
+	data[0] = (0x02<<5); // Initiate SDO upload service
+	data[1] = LOBYTE(obj_index); // Index (LO)
+	data[2] = HIBYTE(obj_index); // Index (HI)
+	data[3] = sub_index; // Sub-index
+	data[4] = 0x00; // reserved. must be 0.
+	data[5] = 0x00; // reserved. must be 0.
+	data[6] = 0x00; // reserved. must be 0.
+	data[7] = 0x00; // reserved. must be 0.
+
+	err = canSendMsg(ch, Txid, 8, data, true);
+	if (err) return err;
+
+	do {
+		err = canReadMsg(ch, Rxid, rx_len, rx_data, true);
+		if (err) return err;
+	} while (Rxid != COB_ID(COBTYPE_TxSDO, node_id));
+
+	rx_fn_code = FN_CODE(Rxid);
+	rx_node_id = NODE_ID(Rxid);
+
+	printf("    %04xh (fn=%s(%d), node=%d, len=%d)", Rxid, COBTYPE_NAME(rx_fn_code), rx_fn_code, rx_node_id, rx_len);
+	for(int nd=0; nd<rx_len; nd++) printf(" %02X ", rx_data[nd]);
+	printf("\n");
+
+	return 0;
+}
+
+int can_get_message(int ch, 
+					unsigned char& fn_code, 
+					unsigned char& node_id, 
+					unsigned char& len, 
+					unsigned char* data, 
+					bool blocking)
+{
+	int err;
+	unsigned long Rxid;
+
+	err = canReadMsg(ch, Rxid, len, data, blocking);
+	if (err) return err;
+
+	fn_code = FN_CODE(Rxid);
+	node_id = NODE_ID(Rxid);
+
+	printf("    %04xh (fn=%s(%d), node=%d, len=%d)", Rxid, COBTYPE_NAME(fn_code), fn_code, node_id, len);
+	for(int nd=0; nd<len; nd++) printf(" %02X ", data[nd]);
+	printf("\n");
+	
+	return 0;
+}
+
+int can_dump_slave(int ch, unsigned char node_id)
+{
+	return 0;
+}
+
+
+
+
+
 int can_nmt_change_state(int ch, unsigned char node_id)
 {
 	return 0;
@@ -341,28 +423,7 @@ int can_servo_off(int ch, unsigned char node_id)
 {
 	return 0;
 }
-int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index)
-{
-	assert(ch >= 0 && ch < MAX_BUS);
 
-	long Txid;
-	unsigned char data[8];
-	int ret;
-	
-	Txid = COB_ID(COBTYPE_RxSDO , node_id);
-	data[0] = (0x02<<5); // Initiate SDO upload service
-	data[1] = LOBYTE(obj_index); // Index (LO)
-	data[2] = HIBYTE(obj_index); // Index (HI)
-	data[3] = sub_index; // Sub-index
-	data[4] = 0x00; // reserved. must be 0.
-	data[5] = 0x00; // reserved. must be 0.
-	data[6] = 0x00; // reserved. must be 0.
-	data[7] = 0x00; // reserved. must be 0.
-
-	ret = canSendMsg(ch, Txid, 8, data, TRUE);
-
-	return 0;
-}
 int can_write_PT(int ch, unsigned char node_id, unsigned short position)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
@@ -393,32 +454,7 @@ int can_write_PT(int ch, unsigned char node_id, unsigned short position)
 	
 	return 0;
 }
-int can_get_message(int ch, 
-					unsigned char* fn_code, 
-					unsigned char* node_id, 
-					int* len, 
-					unsigned char* data, 
-					int blocking)
-{
-	int err;
-	unsigned long Rxid;
 
-	err = canReadMsg(ch, (int*)&Rxid, len, data, blocking);
-	if (!err)
-	{
-		printf("    %04xh (fn=%s(%d), node=%d, len=%d)", Rxid, COBTYPE_NAME(FN_CODE(Rxid)), FN_CODE(Rxid), NODE_ID(Rxid), *len);
-		for(int nd=0; nd<(*len); nd++) printf(" %02x ", data[nd]);
-		printf("\n");
-
-		*fn_code = FN_CODE(Rxid);
-		*node_id = NODE_ID(Rxid);
-	}
-	else
-	{
-		return err;
-	}
-	return 0;
-}
 int can_store_params(int ch, unsigned char node_id)
 {
 	return 0;
@@ -430,31 +466,65 @@ int can_restore_params(int ch, unsigned char node_id)
 
 int can_query_device_type(int ch, unsigned char node_id)
 {
-	return can_query_object(ch, node_id, OD_DEVICE_TYPE, 0);
+	unsigned char len;
+	unsigned char data[8];
+	int err;
+	
+	err = can_query_object(ch, node_id, OD_DEVICE_TYPE, 0, len, data);
+
+	return err;
 }
 
 int can_query_device_name(int ch, unsigned char node_id)
 {
-	return can_query_object(ch, node_id, OD_DEVICE_NAME, 0);
+	unsigned char len;
+	unsigned char data[8];
+	int err;
+	
+	err = can_query_object(ch, node_id, OD_DEVICE_NAME, 0, len, data);
+
+	return err;
 }
 
 int can_query_hw_version(int ch, unsigned char node_id)
 {
-	return can_query_object(ch, node_id, OD_HW_VERSION, 0);
+	unsigned char len;
+	unsigned char data[8];
+	int err;
+	
+	err = can_query_object(ch, node_id, OD_HW_VERSION, 0, len, data);
+
+	return err;
 }
 
 int can_query_sw_version(int ch, unsigned char node_id)
 {
-	return can_query_object(ch, node_id, OD_SW_VERSION, 0);
+	unsigned char len;
+	unsigned char data[8];
+	int err;
+	
+	err = can_query_object(ch, node_id, OD_SW_VERSION, 0, len, data);
+
+	return err;
 }
 
 int can_query_node_id(int ch, unsigned char node_id)
 {
-	return can_query_object(ch, node_id, OD_NODEID, 1);
+	unsigned char len;
+	unsigned char data[8];
+	int err;
+	
+	err = can_query_object(ch, node_id, OD_NODEID, 1, len, data);
+
+	return err;
 }
 
 int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 {
+	unsigned char len;
+	unsigned char data[8];
+	int err;
+
 	unsigned short obj_index = 
 		(pdo_id == 1 ? OD_RxPDO1_MAPPING :
 		(pdo_id == 2 ? OD_RxPDO2_MAPPING :
@@ -463,13 +533,18 @@ int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 	if (!obj_index) return -1;
 
 	for (int sub_index=1; sub_index<=8; sub_index++) {
-		can_query_object(ch, node_id, obj_index, sub_index);
+		err = can_query_object(ch, node_id, obj_index, sub_index, len, data);
+		if (err) return err;
 	}
 	return 0;
 }
 
 int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 {
+	unsigned char len;
+	unsigned char data[8];
+	int err;
+	
 	unsigned short obj_index = 
 		(pdo_id == 1 ? OD_TxPDO1_MAPPING :
 		(pdo_id == 2 ? OD_TxPDO2_MAPPING :
@@ -478,23 +553,35 @@ int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 	if (!obj_index) return -1;
 
 	for (int sub_index=1; sub_index<=8; sub_index++) {
-		can_query_object(ch, node_id, obj_index, sub_index);
+		err = can_query_object(ch, node_id, obj_index, sub_index, len, data);
+		if (err) return err;
 	}
 	return 0;
 }
 
 int can_query_lss_address(int ch, unsigned char node_id)
 {
-	can_query_object(ch, node_id, OD_LSS_ADDRESS, 1); // vendor ID (unsigned32)
-	can_query_object(ch, node_id, OD_LSS_ADDRESS, 2); // product ID (unsigned32)
-	can_query_object(ch, node_id, OD_LSS_ADDRESS, 3); // revision number (unsigned32)
-	can_query_object(ch, node_id, OD_LSS_ADDRESS, 4); // serial number (unsigned 32)
+	unsigned char len;
+	unsigned char data[8];
+	int err;
+	
+	err = can_query_object(ch, node_id, OD_LSS_ADDRESS, 1, len, data); // vendor ID (unsigned32)
+	if (err) return err;
+	err = can_query_object(ch, node_id, OD_LSS_ADDRESS, 2, len, data); // product ID (unsigned32)
+	if (err) return err;
+	err = can_query_object(ch, node_id, OD_LSS_ADDRESS, 3, len, data); // revision number (unsigned32)
+	if (err) return err;
+	err = can_query_object(ch, node_id, OD_LSS_ADDRESS, 4, len, data); // serial number (unsigned 32)
+	if (err) return err;
+
 	return 0;
 }
+
 int can_query_position(int ch, unsigned char node_id)
 {
 	return 0;
 }
+
 int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
@@ -517,10 +604,7 @@ int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode)
 	
 	return 0;
 }
-int can_dump_slave(int ch, unsigned char node_id)
-{
-	return 0;
-}
+
 
 
 CANAPI_END

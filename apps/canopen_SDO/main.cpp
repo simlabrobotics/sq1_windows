@@ -39,20 +39,20 @@ extern int getPCANChannelIndex(const char* cname);
 // CAN communication thread
 static unsigned int __stdcall ioThreadProc(void* inst)
 {
-	unsigned char fn_type;
+	unsigned char fn_code;
 	unsigned char node_id;
 	unsigned short obj_index;
 	unsigned char sub_index;
-	int len;
+	unsigned char len;
 	unsigned char data[8];
 	unsigned char data_return = 0;
-	int i;
+	//int i;
 
 	while (ioThreadRun)
 	{
-		while (0 == can_get_message(CAN_Ch, &fn_type, &node_id, &len, data, FALSE))
+		while (0 == can_get_message(CAN_Ch, fn_code, node_id, len, data, false))
 		{
-			switch (fn_type)
+			switch (fn_code)
 			{
 			case COBTYPE_TxSDO:
 				{
@@ -68,9 +68,9 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 					if (data[0] == 0x80/*scs == 0x04*/) // abort SDO transfer with error
 					{
 						printf("\tSDO transfer is aborted with error.\n");
-						printf("\terror class = %04xh\n", MAKEWORD(data[6], data[7]));
-						printf("\terror code = %02xh\n", data[5]);
-						printf("\tadditional code = %02xh\n", data[4]);
+						printf("\terror class = %04Xh\n", MAKEWORD(data[6], data[7]));
+						printf("\terror code = %02Xh\n", data[5]);
+						printf("\tadditional code = %02Xh\n", data[4]);
 					}
 					else
 					{
@@ -118,7 +118,7 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 						case OD_RxPDO3_MAPPING:
 						case OD_RxPDO4_MAPPING:
 							{
-								printf("\tRxPDO%d mapping[%d] = %04x\n", (obj_index-OD_RxPDO1_MAPPING+1), sub_index);
+								printf("\tRxPDO%d mapping[%d] = %04X\n", (obj_index-OD_RxPDO1_MAPPING+1), sub_index);
 							}
 							break;
 						case OD_TxPDO1_MAPPING:
@@ -126,7 +126,7 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 						case OD_TxPDO3_MAPPING:
 						case OD_TxPDO4_MAPPING:
 							{
-								printf("\tTxPDO%d mapping[%d] = %04x\n", (obj_index-OD_TxPDO1_MAPPING+1), sub_index);
+								printf("\tTxPDO%d mapping[%d] = %04X\n", (obj_index-OD_TxPDO1_MAPPING+1), sub_index);
 							}
 							break;
 						}
@@ -149,7 +149,6 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 void MainLoop()
 {
 	bool bRun = true;
-	int i;
 
 	while (bRun)
 	{
@@ -200,9 +199,9 @@ bool OpenCAN()
 	sendNum = 0;
 	statTime = 0.0;
 
-	ioThreadRun = true;
+	/*ioThreadRun = true;
 	ioThread = _beginthreadex(NULL, 0, ioThreadProc, NULL, 0, NULL);
-	printf(">CAN: starts listening CAN frames\n");
+	printf(">CAN: starts listening CAN frames\n");*/
 	
 	//printf(">CAN: system init\n");
 	//ret = can_sys_init(CAN_Ch, NODE_ID, 5/*msec*/);

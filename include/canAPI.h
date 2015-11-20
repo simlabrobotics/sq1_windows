@@ -43,6 +43,11 @@ int can_open_ex(int ch, int type, int index);
 int can_reset(int ch);
 int can_close(int ch);
 
+// utilities:
+int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char& rx_len, unsigned char* rx_data);  // send single SDO query
+int can_dump_slave(int ch, unsigned char node_id);
+int can_get_message(int ch, unsigned char& fn_code, unsigned char& node_id, unsigned char& len, unsigned char* data, bool blocking);
+
 // NMT:
 int can_nmt_change_state(int ch, unsigned char node_id);
 int can_nmt_query_state(int ch, unsigned char node_id);
@@ -53,9 +58,7 @@ int can_pdo_map(int ch, unsigned char node_id);
 int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned short opmode);
 int can_servo_on(int ch, unsigned char node_id);
 int can_servo_off(int ch, unsigned char node_id);
-int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index);  // send single SDO query
 int can_write_PT(int ch, unsigned char node_id, unsigned short position);
-int can_get_message(int ch, unsigned char* fn_code, unsigned char* node_id, int* len, unsigned char* data, int blocking);
 int can_store_params(int ch, unsigned char node_id);
 int can_restore_params(int ch, unsigned char node_id);
 
@@ -72,9 +75,6 @@ int can_query_position(int ch, unsigned char node_id);
 
 // LSS:
 int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode);
-
-// utilities:
-int can_dump_slave(int ch, unsigned char node_id);
 
 CANAPI_END
 

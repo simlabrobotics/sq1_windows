@@ -54,16 +54,18 @@ void MotionWalk();
 // CAN communication thread
 static unsigned int __stdcall ioThreadProc(void* inst)
 {
-	unsigned char fn_type;
+	unsigned char fn_code;
 	unsigned char node_id;
-	int len;
+	//unsigned short obj_index;
+	//unsigned char sub_index;
+	unsigned char len;
 	unsigned char data[8];
 	unsigned char data_return = 0;
-	int i;
+	//int i;
 
 	while (ioThreadRun)
 	{
-		while (0 == can_get_message(CAN_Ch, &fn_type, &node_id, &len, data, FALSE))
+		while (0 == can_get_message(CAN_Ch, fn_code, node_id, len, data, false))
 		{
 			
 		}
@@ -78,7 +80,6 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 void MainLoop()
 {
 	bool bRun = true;
-	int i;
 
 	while (bRun)
 	{
