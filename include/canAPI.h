@@ -60,6 +60,7 @@ int can_store_params(int ch, unsigned char node_id);
 int can_restore_params(int ch, unsigned char node_id);
 
 // OD(object dictionary):
+int can_query_device_type(int ch, unsigned char node_id);
 int can_query_device_name(int ch, unsigned char node_id);
 int can_query_sw_version(int ch, unsigned char node_id);
 int can_query_hw_version(int ch, unsigned char node_id);

@@ -44,7 +44,6 @@ typedef unsigned long DWORD;
 /*=========================================*/
 /*       Global file-scope variables       */
 /*=========================================*/
-
 TPCANHandle canDev[MAX_BUS] = {
 	PCAN_NONEBUS, // Undefined/default value for a PCAN bus
 
@@ -355,6 +354,10 @@ int can_query_object(int ch, unsigned char node_id, unsigned short obj_id, unsig
 	data[1] = LOBYTE(obj_id); // Index (LO)
 	data[2] = HIBYTE(obj_id); // Index (HI)
 	data[3] = sub_index; // Sub-index
+	data[4] = 0x00; // reserved. must be 0.
+	data[5] = 0x00; // reserved. must be 0.
+	data[6] = 0x00; // reserved. must be 0.
+	data[7] = 0x00; // reserved. must be 0.
 
 	ret = canSendMsg(ch, Txid, 8, data, TRUE);
 
@@ -403,8 +406,8 @@ int can_get_message(int ch,
 	err = canReadMsg(ch, (int*)&Rxid, len, data, blocking);
 	if (!err)
 	{
-		printf("    %04xh (node=%xh, len=%d)", Rxid, NODE_ID(Rxid), *len);
-		for(int nd=0; nd<(*len); nd++) printf(" %02xh ", data[nd]);
+		printf("    %04xh (fn=%s(%d), node=%d, len=%d)", Rxid, COBTYPE_NAME(FN_CODE(Rxid)), FN_CODE(Rxid), NODE_ID(Rxid), *len);
+		for(int nd=0; nd<(*len); nd++) printf(" %02x ", data[nd]);
 		printf("\n");
 
 		*fn_code = FN_CODE(Rxid);
@@ -425,6 +428,11 @@ int can_restore_params(int ch, unsigned char node_id)
 	return 0;
 }
 
+int can_query_device_type(int ch, unsigned char node_id)
+{
+	return can_query_object(ch, node_id, OD_CANCTL_TYPE, 0);
+}
+
 int can_query_device_name(int ch, unsigned char node_id)
 {
 	return can_query_object(ch, node_id, OD_MANUFACTURER_DEVICE_NAME, 0);
@@ -437,7 +445,7 @@ int can_query_hw_version(int ch, unsigned char node_id)
 
 int can_query_sw_version(int ch, unsigned char node_id)
 {
-	return can_query_object(ch, node_id, OD_HW_VERSION, 0);
+	return can_query_object(ch, node_id, OD_SW_VERSION, 0);
 }
 
 int can_query_node_id(int ch, unsigned char node_id)

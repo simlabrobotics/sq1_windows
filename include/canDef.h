@@ -75,6 +75,29 @@ typedef struct{
 #define COBTYPE_RxSDO			0x0c
 #define COBTYPE_ERRCTL			0x0e
 
+static const char* COBTYPE_NAME(unsigned char fn_code)
+{
+	switch (fn_code)
+	{
+	case COBTYPE_NMT: return "NMT";
+	case COBTYPE_SYNC: return "SYNC_EMERGENCY";
+	case COBTYPE_TIMESTAMP: return "TIMESTAMP";
+	//case COBTYPE_EMERGENCY: return "EMERGENCY";
+	case COBTYPE_TxPDO1: return "TxPDO1";
+	case COBTYPE_RxPDO1: return "RxPDO1";
+	case COBTYPE_TxPDO2: return "TxPDO2";
+	case COBTYPE_RxPDO2: return "RxPDO2";
+	case COBTYPE_TxPDO3: return "TxPDO3";
+	case COBTYPE_RxPDO3: return "RxPDO3";
+	case COBTYPE_TxPDO4: return "TxPDO4";
+	case COBTYPE_RxPDO4: return "RxPDO4";
+	case COBTYPE_TxSDO: return "TxSDO";
+	case COBTYPE_RxSDO: return "RxSDO";
+	case COBTYPE_ERRCTL: return "ERRCTL";
+	}
+	return "Unknown";
+}
+
 ///////////////////////////////////////////////
 //  Define special COB-ID:
 #define COBID_LSS_REQ			0x07e5
