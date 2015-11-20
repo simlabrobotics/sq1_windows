@@ -32,6 +32,13 @@ enum JointIndex
 
 const int JDOF = LEG_COUNT*LEG_JDOF; //12;
 
+const unsigned char JointNodeID[LEG_COUNT][LEG_JDOF] = {
+	{0x01, 0x02, 0x03},
+	{0x04, 0x05, 0x06},
+	{0x07, 0x08, 0x09},
+	{0x0A, 0x0B, 0x0C}
+};
+
 NAMESPACE_SQ1_END
 
 #endif // __SQ1_DEF_H__

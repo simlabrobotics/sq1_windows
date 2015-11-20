@@ -272,7 +272,7 @@ int canSendMsg(int bus, int id, char len, unsigned char *data, int blocking){
 /*========================================*/
 /*       CAN API                          */
 /*========================================*/
-int command_can_open(int ch)
+int can_open(int ch)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
 
@@ -286,18 +286,15 @@ int command_can_open(int ch)
 
 	return 0;
 }
-
-int command_can_open_ex(int ch, int type, int index)
+int can_open_ex(int ch, int type, int index)
 {
-	return command_can_open(ch);
+	return can_open(ch);
 }
-
-int command_can_reset(int ch)
+int can_reset(int ch)
 {
 	return -1;
 }
-
-int command_can_close(int ch)
+int can_close(int ch)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
 
@@ -317,91 +314,53 @@ int command_can_close(int ch)
 	printf("\t- Done\n");
 	return 0; // PCAN_ERROR_OK
 }
-
-#define COB_ID(fn_code, node_id) ((unsigned short)(fn_code<<7 | node_id))
-#define FN_CODE(cob_id) ((cob_id>>7) & 0x0f)
-#define NODE_ID(cob_id) (cob_id & 0x7f)
-
-int command_can_query_id(int ch)
+int can_nmt_change_state(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_nmt_query_state(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_sys_init(int ch, unsigned char node_id, int period_msec)
+{
+	return 0;
+}
+int can_pdo_map(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned short opmode)
+{
+	return 0;
+}
+int can_servo_on(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_servo_off(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_query_object(int ch, unsigned char node_id, unsigned short obj_id, unsigned char sub_index)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
 
 	long Txid;
 	unsigned char data[8];
 	int ret;
-
-	Txid = COB_ID(0x0c , 0x01);
+	
+	Txid = COB_ID(COBTYPE_RxSDO , node_id);
 	data[0] = (0x02<<5); // Initiate SDO upload service
-//	data[1] = 0x00; // Index (LO)
-//	data[2] = 0x10; // Index (HI)
-	data[1] = 0x18; // Index (LO)
-	data[2] = 0x10; // Index (HI)
-	data[3] = 0x01; // Sub-index
+	data[1] = LOBYTE(obj_id); // Index (LO)
+	data[2] = HIBYTE(obj_id); // Index (HI)
+	data[3] = sub_index; // Sub-index
 
 	ret = canSendMsg(ch, Txid, 8, data, TRUE);
 
 	return 0;
 }
-
-int command_can_sys_init(int ch, int period_msec)
-{
-	assert(ch >= 0 && ch < MAX_BUS);
-
-	/*long Txid;
-	unsigned char data[8];
-	int ret;
-
-	Txid = ((unsigned long)ID_CMD_SET_PERIOD<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	data[0] = (unsigned char)period_msec;
-	ret = canSendMsg(ch, Txid, 1, data, TRUE);
-
-	Sleep(10);
-
-	Txid = ((unsigned long)ID_CMD_SET_MODE_TASK<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	ret = canSendMsg(ch, Txid, 0, data, TRUE);
-
-	Sleep(10);
-
-	Txid = ((unsigned long)ID_CMD_QUERY_STATE_DATA<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	ret = canSendMsg(ch, Txid, 0, data, TRUE);*/
-
-	return 0;
-}
-
-int command_can_start(int ch)
-{
-	assert(ch >= 0 && ch < MAX_BUS);
-
-	/*long Txid;
-	unsigned char data[8];
-	int ret;
-
-	Txid = ((unsigned long)ID_CMD_QUERY_STATE_DATA<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	ret = canSendMsg(ch, Txid, 0, data, TRUE);
-
-	Sleep(10);
-
-	Txid = ((unsigned long)ID_CMD_SET_SYSTEM_ON<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	ret = canSendMsg(ch, Txid, 0, data, TRUE);*/
-
-	return 0;
-}
-
-int command_can_stop(int ch)
-{
-	assert(ch >= 0 && ch < MAX_BUS);
-
-	/*long Txid;
-	unsigned char data[8];
-	int ret;
-
-	Txid = ((unsigned long)ID_CMD_SET_SYSTEM_OFF<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	ret = canSendMsg(ch, Txid, 0, data, TRUE);*/
-
-	return 0;
-}
-
-int write_current(int ch, int findex, short* pwm)
+int can_write_PT(int ch, unsigned char node_id, unsigned short position)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
 
@@ -431,8 +390,12 @@ int write_current(int ch, int findex, short* pwm)
 	
 	return 0;
 }
-
-int get_message(int ch, char* cmd, char* src, int* len, unsigned char* data, int blocking)
+int can_get_message(int ch, 
+					unsigned char* fn_code, 
+					unsigned char* node_id, 
+					int* len, 
+					unsigned char* data, 
+					int blocking)
 {
 	int err;
 	unsigned long Rxid;
@@ -444,8 +407,8 @@ int get_message(int ch, char* cmd, char* src, int* len, unsigned char* data, int
 		for(int nd=0; nd<(*len); nd++) printf(" %02xh ", data[nd]);
 		printf("\n");
 
-		*cmd = (char)( (Rxid >> 7) & 0x0f );
-		*src = (char)( Rxid & 0x7f);
+		*fn_code = FN_CODE(Rxid);
+		*node_id = NODE_ID(Rxid);
 	}
 	else
 	{
@@ -453,8 +416,80 @@ int get_message(int ch, char* cmd, char* src, int* len, unsigned char* data, int
 	}
 	return 0;
 }
+int can_store_params(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_restore_params(int ch, unsigned char node_id)
+{
+	return 0;
+}
 
-int lss_switch_mode(int ch, unsigned char mode)
+int can_query_device_name(int ch, unsigned char node_id)
+{
+	return can_query_object(ch, node_id, OD_MANUFACTURER_DEVICE_NAME, 0);
+}
+
+int can_query_hw_version(int ch, unsigned char node_id)
+{
+	return can_query_object(ch, node_id, OD_HW_VERSION, 0);
+}
+
+int can_query_sw_version(int ch, unsigned char node_id)
+{
+	return can_query_object(ch, node_id, OD_HW_VERSION, 0);
+}
+
+int can_query_node_id(int ch, unsigned char node_id)
+{
+	return can_query_object(ch, node_id, OD_NODEID, 1);
+}
+
+int can_query_RxPDO1_Comm(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_query_RxPDO2_Comm(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_query_RxPDO3_Comm(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_query_RxPDO4_Comm(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_query_TxPDO1_Comm(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_query_TxPDO2_Comm(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_query_TxPDO3_Comm(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_query_TxPDO4_Comm(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_query_lss_address(int ch, unsigned char node_id)
+{
+	can_query_object(ch, node_id, OD_LSS_ADDRESS, 1); // vendor ID (unsigned32)
+	can_query_object(ch, node_id, OD_LSS_ADDRESS, 2); // product ID (unsigned32)
+	can_query_object(ch, node_id, OD_LSS_ADDRESS, 3); // revision number (unsigned32)
+	can_query_object(ch, node_id, OD_LSS_ADDRESS, 4); // serial number (unsigned 32)
+	return 0;
+}
+int can_query_position(int ch, unsigned char node_id)
+{
+	return 0;
+}
+int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
 
@@ -462,13 +497,24 @@ int lss_switch_mode(int ch, unsigned char mode)
 	unsigned char data[8];
 	int ret;
 
-	data[0] = (unsigned char)(0x04);
-	data[1] = (unsigned char)(mode);
+	if (NODEID_GLOBAL == node_id) {
+		data[0] = (unsigned char)(0x04);
+		data[1] = (unsigned char)(mode);
+	}
+	else {
+		data[0] = (unsigned char)(0x64);
+		data[1] = (unsigned char)(mode);
+	}
 
-	Txid = 0x7E5;
+	Txid = COBID_LSS_REQ;
 	ret = canSendMsg(ch, Txid, 8, data, TRUE);
 	
 	return 0;
 }
+int can_dump_slave(int ch, unsigned char node_id)
+{
+	return 0;
+}
+
 
 CANAPI_END

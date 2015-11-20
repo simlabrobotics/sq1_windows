@@ -37,22 +37,49 @@ CANAPI_BEGIN
 /******************/
 /* CAN device API */
 /******************/
-int command_can_open(int ch);
-int command_can_open_ex(int ch, int type, int index);
-int command_can_reset(int ch);
-int command_can_close(int ch);
+// CAN channel:
+int can_open(int ch);
+int can_open_ex(int ch, int type, int index);
+int can_reset(int ch);
+int can_close(int ch);
 
-int command_can_query_id(int ch); // since v3.0
-int command_can_sys_init(int ch, int period_msec);
-int command_can_start(int ch);
-int command_can_stop(int ch);
+// NMT:
+int can_nmt_change_state(int ch, unsigned char node_id);
+int can_nmt_query_state(int ch, unsigned char node_id);
 
-int write_current(int ch, int findex, short* pwm);
+// object dictionary:
+int can_sys_init(int ch, unsigned char node_id, int period_msec);
+int can_pdo_map(int ch, unsigned char node_id);
+int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned short opmode);
+int can_servo_on(int ch, unsigned char node_id);
+int can_servo_off(int ch, unsigned char node_id);
+int can_query_object(int ch, unsigned char node_id, unsigned short obj_id, unsigned char sub_index);  // send single SDO query
+int can_write_PT(int ch, unsigned char node_id, unsigned short position);
+int can_get_message(int ch, unsigned char* fn_code, unsigned char* node_id, int* len, unsigned char* data, int blocking);
+int can_store_params(int ch, unsigned char node_id);
+int can_restore_params(int ch, unsigned char node_id);
 
-int get_message(int ch, char* cmd, char* src, int* len, unsigned char* data, int blocking);
+// OD(object dictionary):
+int can_query_device_name(int ch, unsigned char node_id);
+int can_query_sw_version(int ch, unsigned char node_id);
+int can_query_hw_version(int ch, unsigned char node_id);
+int can_query_node_id(int ch, unsigned char node_id);
+int can_query_RxPDO1_Comm(int ch, unsigned char node_id);
+int can_query_RxPDO2_Comm(int ch, unsigned char node_id);
+int can_query_RxPDO3_Comm(int ch, unsigned char node_id);
+int can_query_RxPDO4_Comm(int ch, unsigned char node_id);
+int can_query_TxPDO1_Comm(int ch, unsigned char node_id);
+int can_query_TxPDO2_Comm(int ch, unsigned char node_id);
+int can_query_TxPDO3_Comm(int ch, unsigned char node_id);
+int can_query_TxPDO4_Comm(int ch, unsigned char node_id);
+int can_query_lss_address(int ch, unsigned char node_id);
+int can_query_position(int ch, unsigned char node_id);
 
-int lss_switch_mode(int ch, unsigned char mode);
+// LSS:
+int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode);
 
+// utilities:
+int can_dump_slave(int ch, unsigned char node_id);
 
 CANAPI_END
 

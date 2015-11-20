@@ -1,4 +1,4 @@
-/* mySQ1.cpp : Defines the entry point for the console application.
+/* enum_devices: enumerate all canopen slave nodes using LSS(Layer Setting Services).
  *
  * Copyright (c) 2016 SimLab Co., Ltd. http://www.simlab.co.kr/
  * 
@@ -14,23 +14,18 @@
 #include <tchar.h>
 #include <stdio.h>
 #include "canAPI.h"
-#include "sq1_def.h"
-#include "sq1_mem.h"
-#include "sq1_PDO.h"
 
-USING_NAMESPACE_SQ1
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // for CAN communication
-const double delT = 0.003;
+const double delT = 0.005;
 int CAN_Ch = 0;
+unsigned char NODE_ID = 0x01;
 bool ioThreadRun = false;
 uintptr_t ioThread = 0;
 int recvNum = 0;
 int sendNum = 0;
 double statTime = -1.0;
-sQ1_RobotMemory_t vars;
-
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // functions declarations
@@ -40,21 +35,12 @@ bool OpenCAN();
 void CloseCAN();
 extern int getPCANChannelIndex(const char* cname);
 
-
-/////////////////////////////////////////////////////////////////////////////////////////
-// motion declarations
-void MotionStretch();
-void MotionSquat();
-void MotionWalkReady();
-void MotionWalk();
-
-
 /////////////////////////////////////////////////////////////////////////////////////////
 // CAN communication thread
 static unsigned int __stdcall ioThreadProc(void* inst)
 {
-	char id_cmd;
-	char id_src;
+	unsigned char id_cmd;
+	unsigned char id_src;
 	int len;
 	unsigned char data[8];
 	unsigned char data_return = 0;
@@ -62,7 +48,7 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 
 	while (ioThreadRun)
 	{
-		while (0 == get_message(CAN_Ch, &id_cmd, &id_src, &len, data, FALSE))
+		while (0 == can_get_message(CAN_Ch, &id_cmd, &id_src, &len, data, FALSE))
 		{
 			switch (id_cmd)
 			{
@@ -159,7 +145,6 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 	return 0;
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////
 // Application main-loop. It handles the keyboard events
 void MainLoop()
@@ -172,51 +157,6 @@ void MainLoop()
 		if (!_kbhit())
 		{
 			Sleep(5);
-			/*if (pSHM)
-			{
-				switch (pSHM->cmd.command)
-				{
-				case CMD_SERVO_ON:
-					break;
-				case CMD_SERVO_OFF:
-					if (pBHand) pBHand->SetMotionType(eMotionType_NONE);
-					break;
-				case CMD_CMD_1:
-					if (pBHand) pBHand->SetMotionType(eMotionType_HOME);
-					break;
-				case CMD_CMD_2:
-					if (pBHand) pBHand->SetMotionType(eMotionType_READY);
-					break;
-				case CMD_CMD_3:
-					if (pBHand) pBHand->SetMotionType(eMotionType_GRASP_3);
-					break;
-				case CMD_CMD_4:
-					if (pBHand) pBHand->SetMotionType(eMotionType_GRASP_4);
-					break;
-				case CMD_CMD_5:
-					if (pBHand) pBHand->SetMotionType(eMotionType_PINCH_IT);
-					break;
-				case CMD_CMD_6:
-					if (pBHand) pBHand->SetMotionType(eMotionType_PINCH_MT);
-					break;
-				case CMD_CMD_7:
-					if (pBHand) pBHand->SetMotionType(eMotionType_ENVELOP);
-					break;
-				case CMD_CMD_8:
-					if (pBHand) pBHand->SetMotionType(eMotionType_GRAVITY_COMP);
-					break;
-				case CMD_EXIT:
-					bRun = false;
-					break;
-				}
-				pSHM->cmd.command = CMD_NULL;
-				for (i=0; i<MAX_DOF; i++)
-				{
-					pSHM->state.slave_state[i].position = q[i];
-					pSHM->cmd.slave_command[i].torque = tau_des[i];
-				}
-				pSHM->state.time = curTime;
-			}*/
 		}
 		else
 		{
@@ -226,27 +166,10 @@ void MainLoop()
 			case 'q':
 				bRun = false;
 				break;
-			
-			case '1':
-				MotionStretch();
-				break;
-
-			case '2':
-				MotionSquat();
-				break;
-
-			case '3':
-				MotionWalkReady();
-				break;
-
-			case '4':
-				MotionWalk();
-				break;
 			}
 		}
 	}
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Open a CAN data channel
@@ -255,7 +178,7 @@ bool OpenCAN()
 	int ret;
 	
 #if defined(PeakCAN)
-	CAN_Ch = getPCANChannelIndex("USBBUS1");
+	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS1");
 #elif defined(IXXATCAN)
 	CAN_Ch = 1;
 #elif defined(SOFTINGCAN)
@@ -267,7 +190,7 @@ bool OpenCAN()
 #endif
 
 	printf(">CAN(%d): open\n", CAN_Ch);
-	ret = command_can_open(CAN_Ch);
+	ret = can_open(CAN_Ch);
 	if(ret < 0)
 	{
 		printf("ERROR command_canopen !!! \n");
@@ -283,30 +206,20 @@ bool OpenCAN()
 	printf(">CAN: starts listening CAN frames\n");
 	
 	printf(">CAN: query system id\n");
-	ret = command_can_query_id(CAN_Ch);
+	ret = can_query_node_id(CAN_Ch, NODE_ID);
 	if(ret < 0)
 	{
 		printf("ERROR command_can_query_id !!! \n");
-		command_can_close(CAN_Ch);
+		can_close(CAN_Ch);
 		return false;
 	}
 
 	printf(">CAN: system init\n");
-	ret = command_can_sys_init(CAN_Ch, 3/*msec*/);
+	ret = can_sys_init(CAN_Ch, NODE_ID, 5/*msec*/);
 	if(ret < 0)
 	{
 		printf("ERROR command_can_sys_init !!! \n");
-		command_can_close(CAN_Ch);
-		return false;
-	}
-
-	printf(">CAN: start periodic communication\n");
-	ret = command_can_start(CAN_Ch);
-	if(ret < 0)
-	{
-		printf("ERROR command_can_start !!! \n");
-		command_can_stop(CAN_Ch);
-		command_can_close(CAN_Ch);
+		can_close(CAN_Ch);
 		return false;
 	}
 
@@ -319,13 +232,6 @@ void CloseCAN()
 {
 	int ret;
 
-	printf(">CAN: stop periodic communication\n");
-	ret = command_can_stop(CAN_Ch);
-	if(ret < 0)
-	{
-		printf("ERROR command_can_stop !!! \n");
-	}
-
 	if (ioThreadRun)
 	{
 		printf(">CAN: stoped listening CAN frames\n");
@@ -336,7 +242,7 @@ void CloseCAN()
 	}
 
 	printf(">CAN(%d): close\n", CAN_Ch);
-	ret = command_can_close(CAN_Ch);
+	ret = can_close(CAN_Ch);
 	if(ret < 0) printf("ERROR command_can_close !!! \n");
 }
 
@@ -345,36 +251,11 @@ void CloseCAN()
 void PrintInstruction()
 {
 	printf("--------------------------------------------------\n");
-	printf("mySQ1: ");
+	printf("enum devices: \n\n");
 
 	printf("Keyboard Commands:\n");
-	printf("1: Stretch All Legs Downwards\n");
-	printf("2: Squat Motion\n");	
-	printf("3: Walk-Ready Position\n");
-	printf("4: Start Walk\n");
-
-	printf("E: E-STOP\n");
 	printf("Q: Quit this program\n");
-
 	printf("--------------------------------------------------\n\n");
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-// Demo motions:
-void MotionStretch()
-{
-}
-
-void MotionSquat()
-{
-}
-
-void MotionWalkReady()
-{
-}
-
-void MotionWalk()
-{
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -383,11 +264,24 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	PrintInstruction();
 
-	memset(&vars, 0, sizeof(vars));
+	// open CAN channel:
+	if (!OpenCAN())
+		return -1;
 
-	if (OpenCAN())
-		MainLoop();
+	// query Manufacturer's device name
+	can_query_device_name(CAN_Ch, NODE_ID);
 
+	// query H/W, S/W version
+	can_query_hw_version(CAN_Ch, NODE_ID);
+	can_query_sw_version(CAN_Ch, NODE_ID);
+
+	// query LSS address
+	can_query_lss_address(CAN_Ch, NODE_ID);
+
+	// loop wait user input:
+	MainLoop();
+
+	// close CAN channel:
 	CloseCAN();
 
 	return 0;

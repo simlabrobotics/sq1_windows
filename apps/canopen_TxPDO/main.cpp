@@ -22,8 +22,9 @@ USING_NAMESPACE_SQ1
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // for CAN communication
-const double delT = 0.003;
+const double delT = 0.005;
 int CAN_Ch = 0;
+unsigned char NODE_ID = 0x01;
 bool ioThreadRun = false;
 uintptr_t ioThread = 0;
 int recvNum = 0;
@@ -53,8 +54,8 @@ void MotionWalk();
 // CAN communication thread
 static unsigned int __stdcall ioThreadProc(void* inst)
 {
-	char id_cmd;
-	char id_src;
+	unsigned char id_cmd;
+	unsigned char id_src;
 	int len;
 	unsigned char data[8];
 	unsigned char data_return = 0;
@@ -62,7 +63,7 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 
 	while (ioThreadRun)
 	{
-		while (0 == get_message(CAN_Ch, &id_cmd, &id_src, &len, data, FALSE))
+		while (0 == can_get_message(CAN_Ch, &id_cmd, &id_src, &len, data, FALSE))
 		{
 			switch (id_cmd)
 			{
@@ -255,7 +256,7 @@ bool OpenCAN()
 	int ret;
 	
 #if defined(PeakCAN)
-	CAN_Ch = getPCANChannelIndex("USBBUS1");
+	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS1");
 #elif defined(IXXATCAN)
 	CAN_Ch = 1;
 #elif defined(SOFTINGCAN)
@@ -267,7 +268,7 @@ bool OpenCAN()
 #endif
 
 	printf(">CAN(%d): open\n", CAN_Ch);
-	ret = command_can_open(CAN_Ch);
+	ret = can_open(CAN_Ch);
 	if(ret < 0)
 	{
 		printf("ERROR command_canopen !!! \n");
@@ -283,30 +284,20 @@ bool OpenCAN()
 	printf(">CAN: starts listening CAN frames\n");
 	
 	printf(">CAN: query system id\n");
-	ret = command_can_query_id(CAN_Ch);
+	ret = can_query_node_id(CAN_Ch, NODE_ID);
 	if(ret < 0)
 	{
 		printf("ERROR command_can_query_id !!! \n");
-		command_can_close(CAN_Ch);
+		can_close(CAN_Ch);
 		return false;
 	}
 
 	printf(">CAN: system init\n");
-	ret = command_can_sys_init(CAN_Ch, 3/*msec*/);
+	ret = can_sys_init(CAN_Ch, NODE_ID, 5/*msec*/);
 	if(ret < 0)
 	{
 		printf("ERROR command_can_sys_init !!! \n");
-		command_can_close(CAN_Ch);
-		return false;
-	}
-
-	printf(">CAN: start periodic communication\n");
-	ret = command_can_start(CAN_Ch);
-	if(ret < 0)
-	{
-		printf("ERROR command_can_start !!! \n");
-		command_can_stop(CAN_Ch);
-		command_can_close(CAN_Ch);
+		can_close(CAN_Ch);
 		return false;
 	}
 
@@ -319,13 +310,6 @@ void CloseCAN()
 {
 	int ret;
 
-	printf(">CAN: stop periodic communication\n");
-	ret = command_can_stop(CAN_Ch);
-	if(ret < 0)
-	{
-		printf("ERROR command_can_stop !!! \n");
-	}
-
 	if (ioThreadRun)
 	{
 		printf(">CAN: stoped listening CAN frames\n");
@@ -336,7 +320,7 @@ void CloseCAN()
 	}
 
 	printf(">CAN(%d): close\n", CAN_Ch);
-	ret = command_can_close(CAN_Ch);
+	ret = can_close(CAN_Ch);
 	if(ret < 0) printf("ERROR command_can_close !!! \n");
 }
 
