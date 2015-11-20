@@ -430,12 +430,12 @@ int can_restore_params(int ch, unsigned char node_id)
 
 int can_query_device_type(int ch, unsigned char node_id)
 {
-	return can_query_object(ch, node_id, OD_CANCTL_TYPE, 0);
+	return can_query_object(ch, node_id, OD_DEVICE_TYPE, 0);
 }
 
 int can_query_device_name(int ch, unsigned char node_id)
 {
-	return can_query_object(ch, node_id, OD_MANUFACTURER_DEVICE_NAME, 0);
+	return can_query_object(ch, node_id, OD_DEVICE_NAME, 0);
 }
 
 int can_query_hw_version(int ch, unsigned char node_id)
@@ -453,38 +453,36 @@ int can_query_node_id(int ch, unsigned char node_id)
 	return can_query_object(ch, node_id, OD_NODEID, 1);
 }
 
-int can_query_RxPDO1_Comm(int ch, unsigned char node_id)
+int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 {
+	unsigned short obj_index = 
+		(pdo_id == 1 ? OD_RxPDO1_MAPPING :
+		(pdo_id == 2 ? OD_RxPDO2_MAPPING :
+		(pdo_id == 3 ? OD_RxPDO3_MAPPING :
+		(pdo_id == 4 ? OD_RxPDO4_MAPPING : 0))));
+	if (!obj_index) return -1;
+
+	for (int sub_index=1; sub_index<=8; sub_index++) {
+		can_query_object(ch, node_id, obj_index, sub_index);
+	}
 	return 0;
 }
-int can_query_RxPDO2_Comm(int ch, unsigned char node_id)
+
+int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 {
+	unsigned short obj_index = 
+		(pdo_id == 1 ? OD_TxPDO1_MAPPING :
+		(pdo_id == 2 ? OD_TxPDO2_MAPPING :
+		(pdo_id == 3 ? OD_TxPDO3_MAPPING :
+		(pdo_id == 4 ? OD_TxPDO4_MAPPING : 0))));
+	if (!obj_index) return -1;
+
+	for (int sub_index=1; sub_index<=8; sub_index++) {
+		can_query_object(ch, node_id, obj_index, sub_index);
+	}
 	return 0;
 }
-int can_query_RxPDO3_Comm(int ch, unsigned char node_id)
-{
-	return 0;
-}
-int can_query_RxPDO4_Comm(int ch, unsigned char node_id)
-{
-	return 0;
-}
-int can_query_TxPDO1_Comm(int ch, unsigned char node_id)
-{
-	return 0;
-}
-int can_query_TxPDO2_Comm(int ch, unsigned char node_id)
-{
-	return 0;
-}
-int can_query_TxPDO3_Comm(int ch, unsigned char node_id)
-{
-	return 0;
-}
-int can_query_TxPDO4_Comm(int ch, unsigned char node_id)
-{
-	return 0;
-}
+
 int can_query_lss_address(int ch, unsigned char node_id)
 {
 	can_query_object(ch, node_id, OD_LSS_ADDRESS, 1); // vendor ID (unsigned32)

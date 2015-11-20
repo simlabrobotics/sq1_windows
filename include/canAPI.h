@@ -65,14 +65,8 @@ int can_query_device_name(int ch, unsigned char node_id);
 int can_query_sw_version(int ch, unsigned char node_id);
 int can_query_hw_version(int ch, unsigned char node_id);
 int can_query_node_id(int ch, unsigned char node_id);
-int can_query_RxPDO1_Comm(int ch, unsigned char node_id);
-int can_query_RxPDO2_Comm(int ch, unsigned char node_id);
-int can_query_RxPDO3_Comm(int ch, unsigned char node_id);
-int can_query_RxPDO4_Comm(int ch, unsigned char node_id);
-int can_query_TxPDO1_Comm(int ch, unsigned char node_id);
-int can_query_TxPDO2_Comm(int ch, unsigned char node_id);
-int can_query_TxPDO3_Comm(int ch, unsigned char node_id);
-int can_query_TxPDO4_Comm(int ch, unsigned char node_id);
+int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id);
+int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id);
 int can_query_lss_address(int ch, unsigned char node_id);
 int can_query_position(int ch, unsigned char node_id);
 

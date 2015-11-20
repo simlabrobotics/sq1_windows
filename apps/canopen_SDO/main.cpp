@@ -65,24 +65,24 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 					obj_index = MAKEWORD(data[1], data[2]);
 					sub_index = data[3];
 
-					if (data[0] = 0x80/*scs == 0x04*/) // abort SDO transfer with error
+					if (data[0] == 0x80/*scs == 0x04*/) // abort SDO transfer with error
 					{
 						printf("\tSDO transfer is aborted with error.\n");
-						printf("\terror class = %d\n", MAKEWORD(data[6], data[7]));
-						printf("\terror code = %d\n", data[5]);
-						printf("\tadditional code = %d\n", data[4]);
+						printf("\terror class = %04xh\n", MAKEWORD(data[6], data[7]));
+						printf("\terror code = %02xh\n", data[5]);
+						printf("\tadditional code = %02xh\n", data[4]);
 					}
 					else
 					{
 						switch (obj_index)
 						{
-						case OD_CANCTL_TYPE:
+						case OD_DEVICE_TYPE:
 							{
 								printf("\tdevice profile number = %d\n", MAKEWORD(data[6], data[7]));
 								printf("\tnumber of SDOs supported = %d\n", MAKEWORD(data[4], data[5]));
 							}
 							break;
-						case OD_MANUFACTURER_DEVICE_NAME:
+						case OD_DEVICE_NAME:
 							{
 								printf("\tdevice name = %c%c%c%c\n", data[4], data[5], data[6], data[7]);
 							}
@@ -111,6 +111,22 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 								case 3: printf("\trevision number = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
 								case 4: printf("\tserial number = %d\n", MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))); break;
 								}
+							}
+							break;
+						case OD_RxPDO1_MAPPING:
+						case OD_RxPDO2_MAPPING:
+						case OD_RxPDO3_MAPPING:
+						case OD_RxPDO4_MAPPING:
+							{
+								printf("\tRxPDO%d mapping[%d] = %04x\n", (obj_index-OD_RxPDO1_MAPPING+1), sub_index);
+							}
+							break;
+						case OD_TxPDO1_MAPPING:
+						case OD_TxPDO2_MAPPING:
+						case OD_TxPDO3_MAPPING:
+						case OD_TxPDO4_MAPPING:
+							{
+								printf("\tTxPDO%d mapping[%d] = %04x\n", (obj_index-OD_TxPDO1_MAPPING+1), sub_index);
 							}
 							break;
 						}
@@ -243,17 +259,32 @@ int _tmain(int argc, _TCHAR* argv[])
 		return -1;
 
 	// query device type:
+	printf("query device type...\n");
 	can_query_device_type(CAN_Ch, NODE_ID);
-	Sleep(1000);
 
-	// query Manufacturer's device name:
+	// query device name:
+	//printf("query device name...\n");
 	//can_query_device_name(CAN_Ch, NODE_ID);
 	
 	// query H/W, S/W version:
+	//printf("query H/W version...\n");
 	//can_query_hw_version(CAN_Ch, NODE_ID);
+	//printf("query S/W version...\n");
 	//can_query_sw_version(CAN_Ch, NODE_ID);
 	
+	// query PDO mapping:
+	printf("query PDO mapping...\n");
+	can_query_RxPDO_mapping(CAN_Ch, NODE_ID, 1);
+	can_query_RxPDO_mapping(CAN_Ch, NODE_ID, 2);
+	can_query_RxPDO_mapping(CAN_Ch, NODE_ID, 3);
+	can_query_RxPDO_mapping(CAN_Ch, NODE_ID, 4);
+	can_query_TxPDO_mapping(CAN_Ch, NODE_ID, 1);
+	can_query_TxPDO_mapping(CAN_Ch, NODE_ID, 2);
+	can_query_TxPDO_mapping(CAN_Ch, NODE_ID, 3);
+	can_query_TxPDO_mapping(CAN_Ch, NODE_ID, 4);
+
 	// query LSS address:
+	printf("query LSS address...\n");
 	can_query_lss_address(CAN_Ch, NODE_ID);
 
 	// loop wait user input:

@@ -114,13 +114,13 @@ static const char* COBTYPE_NAME(unsigned char fn_code)
 //	2000 - 2FFF Manufacturer-specific profile area
 //	6000 - 6FFF Standardized device profile area
 //	A000 - FFF Reserved
-#define OD_CANCTL_TYPE							0x1000
+#define OD_DEVICE_TYPE							0x1000
 #define OD_ERROR_REGISTER						0x1001
-#define OD_MANUFACTURER_STATUS_REGISTER			0x1002
+#define OD_STATUS_REGISTER						0x1002
 #define OD_PREDEFINED_ERROR_FIELD				0x1003
 #define OD_COBID_SYNC							0x1005
 #define OD_COMM_CYCLE_PERIOD					0x1006
-#define OD_MANUFACTURER_DEVICE_NAME				0x1008
+#define OD_DEVICE_NAME							0x1008
 #define OD_HW_VERSION							0x1009
 #define OD_SW_VERSION							0x100A
 #define OD_NODEID								0x100B
@@ -136,22 +136,22 @@ static const char* COBTYPE_NAME(unsigned char fn_code)
 #define OD_OS_COMMAND_MODE						0x1024
 #define OD_ERROR_BEHAVIOR						0x1029
 #define OD_SDO1_SERVER							0x1200
-#define OD_RxPDO1_COMM							0x1400
-#define OD_RxPDO2_COMM							0x1401
-#define OD_RxPDO3_COMM							0x1402
-#define OD_RxPDO4_COMM							0x1403
-#define OD_RxPDO1_MAP							0x1600
-#define OD_RxPDO2_MAP							0x1601
-#define OD_RxPDO3_MAP							0x1602
-#define OD_RxPDO4_MAP							0x1603
-#define OD_TxPDO1_COMM							0x1800
-#define OD_TxPDO2_COMM							0x1801
-#define OD_TxPDO3_COMM							0x1802
-#define OD_TxPDO4_COMM							0x1803
-#define OD_TxPDO1_MAP							0x1A00
-#define OD_TxPDO2_MAP							0x1A01
-#define OD_TxPDO3_MAP							0x1A02
-#define OD_TxPDO4_MAP							0x1A03
+#define OD_RxPDO1_COMM_PARAM					0x1400
+#define OD_RxPDO2_COMM_PARAM					0x1401
+#define OD_RxPDO3_COMM_PARAM					0x1402
+#define OD_RxPDO4_COMM_PARAM					0x1403
+#define OD_RxPDO1_MAPPING						0x1600
+#define OD_RxPDO2_MAPPING						0x1601
+#define OD_RxPDO3_MAPPING						0x1602
+#define OD_RxPDO4_MAPPING						0x1603
+#define OD_TxPDO1_COMM_PARAM					0x1800
+#define OD_TxPDO2_COMM_PARAM					0x1801
+#define OD_TxPDO3_COMM_PARAM					0x1802
+#define OD_TxPDO4_COMM_PARAM					0x1803
+#define OD_TxPDO1_MAPPING						0x1A00
+#define OD_TxPDO2_MAPPING						0x1A01
+#define OD_TxPDO3_MAPPING						0x1A02
+#define OD_TxPDO4_MAPPING						0x1A03
 // Manufacturer(ELMO)-specific profile area
 #define OD_PVT_DATA								0x2001
 #define OD_PT_DATA								0x2002
