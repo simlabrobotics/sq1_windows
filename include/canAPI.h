@@ -44,7 +44,7 @@ int can_reset(int ch);
 int can_close(int ch);
 
 // utilities:
-int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char& rx_len, unsigned char* rx_data);  // send single SDO query
+int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char* buf, unsigned short& buf_len);  // send single SDO query
 int can_dump_slave(int ch, unsigned char node_id);
 int can_get_message(int ch, unsigned char& fn_code, unsigned char& node_id, unsigned char& len, unsigned char* data, bool blocking);
 
