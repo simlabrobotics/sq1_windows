@@ -777,5 +777,91 @@ int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode)
 	return 0;
 }
 
+int can_nmt_node_start(int ch, unsigned char node_id)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	long Txid;
+	unsigned char data[8];
+	int ret;
+
+	data[0] = (unsigned char)(NMT_CMD_NODE_START);
+	data[1] = (unsigned char)(node_id);
+
+	Txid = COBID_NMT;
+	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	
+	return 0;
+}
+
+int can_nmt_node_stop(int ch, unsigned char node_id)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	long Txid;
+	unsigned char data[8];
+	int ret;
+
+	data[0] = (unsigned char)(NMT_CMD_NODE_STOP);
+	data[1] = (unsigned char)(node_id);
+
+	Txid = COBID_NMT;
+	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	
+	return 0;
+}
+
+int can_nmt_node_ready(int ch, unsigned char node_id)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	long Txid;
+	unsigned char data[8];
+	int ret;
+
+	data[0] = (unsigned char)(NMT_CMD_NODE_READY);
+	data[1] = (unsigned char)(node_id);
+
+	Txid = COBID_NMT;
+	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	
+	return 0;
+}
+
+int can_nmt_soft_reset(int ch, unsigned char node_id)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	long Txid;
+	unsigned char data[8];
+	int ret;
+
+	data[0] = (unsigned char)(NMT_CMD_NODE_RESET);
+	data[1] = (unsigned char)(node_id);
+
+	Txid = COBID_NMT;
+	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	
+	return 0;
+}
+
+int can_nmt_hard_reset(int ch, unsigned char node_id)
+{
+	/*assert(ch >= 0 && ch < MAX_BUS);
+
+	long Txid;
+	unsigned char data[8];
+	int ret;
+
+	data[0] = (unsigned char)(NMT_CMD_COMM_RESET);
+	data[1] = (unsigned char)(node_id);
+
+	Txid = COBID_NMT;
+	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	
+	return 0;*/
+	return -1;
+}
+
 
 CANAPI_END

@@ -76,6 +76,12 @@ int can_query_position(int ch, unsigned char node_id);
 // LSS:
 int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode);
 
+// NMT:
+int can_nmt_node_start(int ch, unsigned char node_id); // go to operational state
+int can_nmt_node_stop(int ch, unsigned char node_id); // go to prepared(stopped) state
+int can_nmt_node_ready(int ch, unsigned char node_id); // enter pre-operational state
+int can_nmt_soft_reset(); // perform full software reset
+int can_nmt_hard_reset(); // It is recommended that you turn off the motor and kill any user program before executing.
 
 CANAPI_END
 

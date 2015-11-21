@@ -100,6 +100,9 @@ static const char* COBTYPE_NAME(unsigned char fn_code)
 
 ///////////////////////////////////////////////
 //  Define special COB-ID:
+#define COBID_NMT				0x0000
+#define COBID_SYNC				0x0080
+#define COBID_TIMESTAMP			0X0100
 #define COBID_LSS_REQ			0x07e5
 #define COBID_LSS_ACK			0x07e5
 
@@ -193,6 +196,21 @@ static const char* COBTYPE_NAME(unsigned char fn_code)
 //  Define LSS Modes:
 #define LSS_MODE_CONFIGURATION		0x01
 #define LSS_MODE_OPERATION			0x00
+
+////////////////////////////////////////////////
+//  Define NMT Communication States:
+#define NMT_INITIALIZATION			0x00
+#define NMT_PRE_OPERATIONAL			0x01
+#define NMT_OPERATIONAL				0x02
+#define NMT_STOPPED					0x03
+
+////////////////////////////////////////////////
+//  Define NMT Command Specifier:
+#define NMT_CMD_NODE_START			0x01
+#define NMT_CMD_NODE_STOP			0x02
+#define NMT_CMD_NODE_READY			0X80
+#define NMT_CMD_NODE_RESET			0x81
+#define NMT_CMD_COMM_RESET			0x82
 
 ////////////////////////////////////////////////
 //  Utils:
