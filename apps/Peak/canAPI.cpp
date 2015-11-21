@@ -349,7 +349,7 @@ int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, un
 						unsigned char t   : 1; // toggle bit
 						unsigned char ccs : 3; // client command specifier (client to server)
 					};
-					// upload SDO segment protocol (server -> client):
+					// initiate SDO upload protocol (server -> client):
 					struct {
 						unsigned char s   : 1; // size indicator
 						unsigned char e   : 1; // transfer type;
@@ -359,7 +359,8 @@ int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, un
 					};
 					// upload SDO segment protocol (server -> client):
 					struct {
-						unsigned char x4  : 4; // (not used)
+						unsigned char c   : 1; // more segments to be uploaded(0: more, 1:no more)
+						unsigned char x4  : 3; // (not used)
 						unsigned char t   : 1; // toggle bit
 						unsigned char scs : 3; // server command specifier (server to client)
 					};
@@ -419,28 +420,39 @@ int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, un
 		printf("\n");
 #endif
 
-		if (rx_data.scs == 4) {
+		if (rx_data.scs == 2) {
+			if (rx_data.e == 1) {
+				for (rx_seg_data_index = 4; rx_seg_data_index < (8-rx_data.n); rx_seg_data_index++)
+					buf[buf_len++] = rx_data[rx_seg_data_index];
+				break; // expedited transfer
+			}
+			else {
+				// prepare upload SDO segment request:
+				tx_data.ccs = 3; // upload segment request
+				tx_data.t = 0; // toggle bit
+			}
+		}
+		else if (rx_data.scs == 0) {
+			for (rx_seg_data_index = 1; rx_seg_data_index < (8-rx_data.n); rx_seg_data_index++)
+				buf[buf_len++] = rx_data[rx_seg_data_index];
+
+			if (rx_data.c == 1) {
+				break; // no more segment response
+			}
+			else {
+				tx_data.t = (tx_data.t == 0 ? 1 : 0); // toggle
+			}
+		}
+		else if (rx_data.scs == 4) {
 			printf("<< upload SDO transaction aborted.(error code = %04X %04X)\n", MAKEWORD(rx_data[6], rx_data[7]), MAKEWORD(rx_data[4], rx_data[5]));
 			return MAKELONG(MAKEWORD(rx_data[4], rx_data[5]), MAKEWORD(rx_data[6], rx_data[7]));
 		}
-
-		if (rx_data.e == 1) {
-			for (rx_seg_data_index = 4; rx_seg_data_index < (8-rx_data.n); rx_seg_data_index++)
-				buf[buf_len++] = rx_data[rx_seg_data_index];
-		}
 		else {
-			if (rx_data.scs == 0) {
-				for (rx_seg_data_index = 1; rx_seg_data_index < (8-rx_data.n); rx_seg_data_index++)
-					buf[buf_len++] = rx_data[rx_seg_data_index];
-			}
+			// abort transaction:
+			printf("<< upload SDO transaction aborted.(abnormal scs code)\n");
+			return -1;
 		}
-
-		// prepare upload SDO segment request:
-		tx_data.ccs = 3; // upload segment request
-		if (rx_data.scs != 2)
-			tx_data.t = !tx_data.t; // toggle bit
-
-	} while (rx_data.scs != 4 && rx_data.e != 1);
+	} while (true);
 
 	return 0;
 }
