@@ -543,7 +543,7 @@ int can_write_PT(int ch, unsigned char node_id, unsigned short position)
 		data[7] = (unsigned char)(pwm[3] & 0x00ff);
 
 		Txid = ((unsigned long)(ID_CMD_SET_TORQUE_1 + findex)<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-		ret = canSendMsg(ch, Txid, 8, data, TRUE);
+		ret = canSendMsg(ch, Txid, 8, data, true);
 	}
 	else
 		return -1;*/
@@ -772,7 +772,7 @@ int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode)
 	}
 
 	Txid = COBID_LSS_REQ;
-	ret = canSendMsg(ch, Txid, 8, data, TRUE);
+	ret = canSendMsg(ch, Txid, 8, data, true);
 	
 	return 0;
 }
@@ -789,7 +789,7 @@ int can_nmt_node_start(int ch, unsigned char node_id)
 	data[1] = (unsigned char)(node_id);
 
 	Txid = COBID_NMT;
-	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	ret = canSendMsg(ch, Txid, 2, data, true);
 	
 	return 0;
 }
@@ -806,7 +806,7 @@ int can_nmt_node_stop(int ch, unsigned char node_id)
 	data[1] = (unsigned char)(node_id);
 
 	Txid = COBID_NMT;
-	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	ret = canSendMsg(ch, Txid, 2, data, true);
 	
 	return 0;
 }
@@ -823,7 +823,7 @@ int can_nmt_node_ready(int ch, unsigned char node_id)
 	data[1] = (unsigned char)(node_id);
 
 	Txid = COBID_NMT;
-	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	ret = canSendMsg(ch, Txid, 2, data, true);
 	
 	return 0;
 }
@@ -840,7 +840,7 @@ int can_nmt_soft_reset(int ch, unsigned char node_id)
 	data[1] = (unsigned char)(node_id);
 
 	Txid = COBID_NMT;
-	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	ret = canSendMsg(ch, Txid, 2, data, true);
 	
 	return 0;
 }
@@ -857,7 +857,38 @@ int can_nmt_hard_reset(int ch, unsigned char node_id)
 	data[1] = (unsigned char)(node_id);
 
 	Txid = COBID_NMT;
-	ret = canSendMsg(ch, Txid, 2, data, TRUE);
+	ret = canSendMsg(ch, Txid, 2, data, true);
+	
+	return 0;*/
+	return -1;
+}
+
+int can_sync(int ch)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	long Txid;
+	int ret;
+
+	Txid = COBID_SYNC;
+	ret = canSendMsg(ch, Txid, 0, 0, true);
+	
+	return 0;
+}
+
+int can_timestamp(int ch)
+{
+	/*assert(ch >= 0 && ch < MAX_BUS);
+
+	long Txid;
+	unsigned char data[8];
+	int ret;
+
+	data[0] = 0x00;
+	data[1] = 0x00;
+
+	Txid = COBID_TIMESTAMP;
+	ret = canSendMsg(ch, Txid, 0, data, true);
 	
 	return 0;*/
 	return -1;

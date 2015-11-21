@@ -83,6 +83,10 @@ int can_nmt_node_ready(int ch, unsigned char node_id); // enter pre-operational 
 int can_nmt_soft_reset(); // perform full software reset
 int can_nmt_hard_reset(); // It is recommended that you turn off the motor and kill any user program before executing.
 
+// SYNC and Time Stamp:
+int can_sync(int ch);
+int can_timestamp(int ch);
+
 CANAPI_END
 
 #endif
