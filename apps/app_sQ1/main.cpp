@@ -32,15 +32,15 @@ int sendNum = 0;
 double statTime = -1.0;
 sQ1_RobotMemory_t vars;
 
-
 /////////////////////////////////////////////////////////////////////////////////////////
 // functions declarations
 void PrintInstruction();
 void MainLoop();
 bool OpenCAN();
 void CloseCAN();
+void StartCANListenThread();
+void StopCANListenThread();
 extern int getPCANChannelIndex(const char* cname);
-
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // motion declarations
@@ -48,7 +48,6 @@ void MotionStretch();
 void MotionSquat();
 void MotionWalkReady();
 void MotionWalk();
-
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // CAN communication thread
@@ -67,13 +66,23 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 	{
 		while (0 == can_get_message(CAN_Ch, fn_code, node_id, len, data, false))
 		{
-			
+			switch (fn_code)
+			{
+			case COBTYPE_TxSDO:
+				{
+				}
+				break;
+
+			case COBTYPE_TxPDO1:
+				{
+				}
+				break;
+			}
 		}
 	}
 
 	return 0;
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Application main-loop. It handles the keyboard events
@@ -86,51 +95,6 @@ void MainLoop()
 		if (!_kbhit())
 		{
 			Sleep(5);
-			/*if (pSHM)
-			{
-				switch (pSHM->cmd.command)
-				{
-				case CMD_SERVO_ON:
-					break;
-				case CMD_SERVO_OFF:
-					if (pBHand) pBHand->SetMotionType(eMotionType_NONE);
-					break;
-				case CMD_CMD_1:
-					if (pBHand) pBHand->SetMotionType(eMotionType_HOME);
-					break;
-				case CMD_CMD_2:
-					if (pBHand) pBHand->SetMotionType(eMotionType_READY);
-					break;
-				case CMD_CMD_3:
-					if (pBHand) pBHand->SetMotionType(eMotionType_GRASP_3);
-					break;
-				case CMD_CMD_4:
-					if (pBHand) pBHand->SetMotionType(eMotionType_GRASP_4);
-					break;
-				case CMD_CMD_5:
-					if (pBHand) pBHand->SetMotionType(eMotionType_PINCH_IT);
-					break;
-				case CMD_CMD_6:
-					if (pBHand) pBHand->SetMotionType(eMotionType_PINCH_MT);
-					break;
-				case CMD_CMD_7:
-					if (pBHand) pBHand->SetMotionType(eMotionType_ENVELOP);
-					break;
-				case CMD_CMD_8:
-					if (pBHand) pBHand->SetMotionType(eMotionType_GRAVITY_COMP);
-					break;
-				case CMD_EXIT:
-					bRun = false;
-					break;
-				}
-				pSHM->cmd.command = CMD_NULL;
-				for (i=0; i<MAX_DOF; i++)
-				{
-					pSHM->state.slave_state[i].position = q[i];
-					pSHM->cmd.slave_command[i].torque = tau_des[i];
-				}
-				pSHM->state.time = curTime;
-			}*/
 		}
 		else
 		{
@@ -161,7 +125,6 @@ void MainLoop()
 	}
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////
 // Open a CAN data channel
 bool OpenCAN()
@@ -188,31 +151,7 @@ bool OpenCAN()
 		return false;
 	}
 
-	recvNum = 0;
-	sendNum = 0;
-	statTime = 0.0;
-
-	ioThreadRun = true;
-	ioThread = _beginthreadex(NULL, 0, ioThreadProc, NULL, 0, NULL);
-	printf(">CAN: starts listening CAN frames\n");
-	
-	printf(">CAN: query system id\n");
-	ret = can_query_node_id(CAN_Ch, NODE_ID);
-	if(ret < 0)
-	{
-		printf("ERROR command_can_query_id !!! \n");
-		can_close(CAN_Ch);
-		return false;
-	}
-
-	printf(">CAN: system init\n");
-	ret = can_sys_init(CAN_Ch, NODE_ID, 5/*msec*/);
-	if(ret < 0)
-	{
-		printf("ERROR command_can_sys_init !!! \n");
-		can_close(CAN_Ch);
-		return false;
-	}
+	//StartCANListenThread();
 
 	return true;
 }
@@ -223,6 +162,28 @@ void CloseCAN()
 {
 	int ret;
 
+	StopCANListenThread();
+
+	printf(">CAN(%d): close\n", CAN_Ch);
+	ret = can_close(CAN_Ch);
+	if(ret < 0) printf("ERROR command_can_close !!! \n");
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Start/Stop CAN message listener
+void StartCANListenThread()
+{
+	recvNum = 0;
+	sendNum = 0;
+	statTime = 0.0;
+
+	ioThreadRun = true;
+	ioThread = _beginthreadex(NULL, 0, ioThreadProc, NULL, 0, NULL);
+	printf(">CAN: starts listening CAN frames\n");
+}
+
+void StopCANListenThread()
+{
 	if (ioThreadRun)
 	{
 		printf(">CAN: stoped listening CAN frames\n");
@@ -231,10 +192,6 @@ void CloseCAN()
 		CloseHandle((HANDLE)ioThread);
 		ioThread = 0;
 	}
-
-	printf(">CAN(%d): close\n", CAN_Ch);
-	ret = can_close(CAN_Ch);
-	if(ret < 0) printf("ERROR command_can_close !!! \n");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -282,9 +239,41 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	memset(&vars, 0, sizeof(vars));
 
-	if (OpenCAN())
-		MainLoop();
+	// open CAN channel:
+	if (!OpenCAN())
+		return -1;
 
+	// servo off(make it sure motor drives are in servo-off state):
+	printf("servo off...\n");
+	can_servo_off(CAN_Ch, NODE_ID);
+
+	// set mode of operation:
+	printf("set mode of operation...\n");
+	can_set_mode_of_operation(CAN_Ch, NODE_ID, UM_TORQUE);
+
+	// servo on:
+	printf("servo on...\n");
+	can_servo_on(CAN_Ch, NODE_ID);
+
+	// start periodic communication:
+	printf("start periodic communication...\n");
+
+	// loop wait user input:
+	printf("main loop...\n");
+	MainLoop();
+
+	// stop periodic communication:
+	printf("stop periodic communication...\n");
+	
+	// flush can messages:
+	printf("flush can messages...\n");
+	can_servo_off(CAN_Ch, NODE_ID);
+
+	// servo off:
+	printf("servo off...\n");
+	can_servo_off(CAN_Ch, NODE_ID);
+
+	// close CAN channel:
 	CloseCAN();
 
 	return 0;

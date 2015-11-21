@@ -33,6 +33,8 @@ void PrintInstruction();
 void MainLoop();
 bool OpenCAN();
 void CloseCAN();
+void StartCANListenThread();
+void StopCANListenThread();
 extern int getPCANChannelIndex(const char* cname);
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -195,22 +197,7 @@ bool OpenCAN()
 		return false;
 	}
 
-	recvNum = 0;
-	sendNum = 0;
-	statTime = 0.0;
-
-	/*ioThreadRun = true;
-	ioThread = _beginthreadex(NULL, 0, ioThreadProc, NULL, 0, NULL);
-	printf(">CAN: starts listening CAN frames\n");*/
-	
-	//printf(">CAN: system init\n");
-	//ret = can_sys_init(CAN_Ch, NODE_ID, 5/*msec*/);
-	//if(ret < 0)
-	//{
-	//	printf("ERROR command_can_sys_init !!! \n");
-	//	can_close(CAN_Ch);
-	//	return false;
-	//}
+	//StartCANListenThread();
 
 	return true;
 }
@@ -221,6 +208,28 @@ void CloseCAN()
 {
 	int ret;
 
+	StopCANListenThread();
+
+	printf(">CAN(%d): close\n", CAN_Ch);
+	ret = can_close(CAN_Ch);
+	if(ret < 0) printf("ERROR command_can_close !!! \n");
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Start/Stop CAN message listener
+void StartCANListenThread()
+{
+	recvNum = 0;
+	sendNum = 0;
+	statTime = 0.0;
+
+	ioThreadRun = true;
+	ioThread = _beginthreadex(NULL, 0, ioThreadProc, NULL, 0, NULL);
+	printf(">CAN: starts listening CAN frames\n");
+}
+
+void StopCANListenThread()
+{
 	if (ioThreadRun)
 	{
 		printf(">CAN: stoped listening CAN frames\n");
@@ -229,10 +238,6 @@ void CloseCAN()
 		CloseHandle((HANDLE)ioThread);
 		ioThread = 0;
 	}
-
-	printf(">CAN(%d): close\n", CAN_Ch);
-	ret = can_close(CAN_Ch);
-	if(ret < 0) printf("ERROR command_can_close !!! \n");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

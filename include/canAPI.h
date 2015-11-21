@@ -43,14 +43,44 @@ int can_open_ex(int ch, int type, int index);
 int can_reset(int ch);
 int can_close(int ch);
 
-// utilities:
-int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char* buf, unsigned short& buf_len);  // send single SDO query
-int can_dump_slave(int ch, unsigned char node_id);
-int can_get_message(int ch, unsigned char& fn_code, unsigned char& node_id, unsigned char& len, unsigned char* data, bool blocking);
-
 // NMT:
-int can_nmt_change_state(int ch, unsigned char node_id);
-int can_nmt_query_state(int ch, unsigned char node_id);
+int can_nmt_node_start(int ch, unsigned char node_id); // go to operational state
+int can_nmt_node_stop(int ch, unsigned char node_id); // go to prepared(stopped) state
+int can_nmt_node_ready(int ch, unsigned char node_id); // enter pre-operational state
+int can_nmt_soft_reset(); // perform full software reset
+int can_nmt_hard_reset(); // It is recommended that you turn off the motor and kill any user program before executing.
+
+// SYNC and Time Stamp:
+int can_sync(int ch);
+int can_timestamp(int ch);
+
+// PDO:
+
+
+// SDO:
+int can_sdo_request(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char* buf, unsigned short& buf_len);  // send single SDO query
+
+// SDO queries:
+int can_query_device_type(int ch, unsigned char node_id);
+int can_query_device_name(int ch, unsigned char node_id);
+int can_query_sw_version(int ch, unsigned char node_id);
+int can_query_hw_version(int ch, unsigned char node_id);
+int can_query_node_id(int ch, unsigned char node_id);
+int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id);
+int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id);
+int can_query_lss_address(int ch, unsigned char node_id);
+int can_query_position(int ch, unsigned char node_id);
+
+
+// Binary interpreter:
+int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len);
+
+// OS interpreter:
+int can_os_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len);
+
+
+// LSS:
+int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode);
 
 // object dictionary:
 int can_sys_init(int ch, unsigned char node_id, int period_msec);
@@ -62,30 +92,10 @@ int can_write_PT(int ch, unsigned char node_id, unsigned short position);
 int can_store_params(int ch, unsigned char node_id);
 int can_restore_params(int ch, unsigned char node_id);
 
-// OD(object dictionary):
-int can_query_device_type(int ch, unsigned char node_id);
-int can_query_device_name(int ch, unsigned char node_id);
-int can_query_sw_version(int ch, unsigned char node_id);
-int can_query_hw_version(int ch, unsigned char node_id);
-int can_query_node_id(int ch, unsigned char node_id);
-int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id);
-int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id);
-int can_query_lss_address(int ch, unsigned char node_id);
-int can_query_position(int ch, unsigned char node_id);
+// utilities:
+int can_dump_slave(int ch, unsigned char node_id);
+int can_get_message(int ch, unsigned char& fn_code, unsigned char& node_id, unsigned char& len, unsigned char* data, bool blocking);
 
-// LSS:
-int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode);
-
-// NMT:
-int can_nmt_node_start(int ch, unsigned char node_id); // go to operational state
-int can_nmt_node_stop(int ch, unsigned char node_id); // go to prepared(stopped) state
-int can_nmt_node_ready(int ch, unsigned char node_id); // enter pre-operational state
-int can_nmt_soft_reset(); // perform full software reset
-int can_nmt_hard_reset(); // It is recommended that you turn off the motor and kill any user program before executing.
-
-// SYNC and Time Stamp:
-int can_sync(int ch);
-int can_timestamp(int ch);
 
 CANAPI_END
 

@@ -1,4 +1,4 @@
-/* enum_devices: enumerate all canopen slave nodes using LSS(Layer Setting Services).
+/* mySQ1.cpp : Defines the entry point for the console application.
  *
  * Copyright (c) 2016 SimLab Co., Ltd. http://www.simlab.co.kr/
  * 
@@ -14,6 +14,11 @@
 #include <tchar.h>
 #include <stdio.h>
 #include "canAPI.h"
+#include "sq1_def.h"
+#include "sq1_mem.h"
+#include "sq1_PDO.h"
+
+USING_NAMESPACE_SQ1
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // for CAN communication
@@ -25,6 +30,7 @@ uintptr_t ioThread = 0;
 int recvNum = 0;
 int sendNum = 0;
 double statTime = -1.0;
+sQ1_RobotMemory_t vars;
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // functions declarations
@@ -35,6 +41,13 @@ void CloseCAN();
 void StartCANListenThread();
 void StopCANListenThread();
 extern int getPCANChannelIndex(const char* cname);
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// motion declarations
+void MotionStretch();
+void MotionSquat();
+void MotionWalkReady();
+void MotionWalk();
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // CAN communication thread
@@ -53,7 +66,18 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 	{
 		while (0 == can_get_message(CAN_Ch, fn_code, node_id, len, data, false))
 		{
-			
+			switch (fn_code)
+			{
+			case COBTYPE_TxSDO:
+				{
+				}
+				break;
+
+			case COBTYPE_TxPDO1:
+				{
+				}
+				break;
+			}
 		}
 	}
 
@@ -65,7 +89,7 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 void MainLoop()
 {
 	bool bRun = true;
-	
+
 	while (bRun)
 	{
 		if (!_kbhit())
@@ -79,6 +103,22 @@ void MainLoop()
 			{
 			case 'q':
 				bRun = false;
+				break;
+			
+			case '1':
+				MotionStretch();
+				break;
+
+			case '2':
+				MotionSquat();
+				break;
+
+			case '3':
+				MotionWalkReady();
+				break;
+
+			case '4':
+				MotionWalk();
 				break;
 			}
 		}
@@ -159,11 +199,36 @@ void StopCANListenThread()
 void PrintInstruction()
 {
 	printf("--------------------------------------------------\n");
-	printf("enum devices: \n\n");
+	printf("mySQ1: ");
 
 	printf("Keyboard Commands:\n");
+	printf("1: Stretch All Legs Downwards\n");
+	printf("2: Squat Motion\n");	
+	printf("3: Walk-Ready Position\n");
+	printf("4: Start Walk\n");
+
+	printf("E: E-STOP\n");
 	printf("Q: Quit this program\n");
+
 	printf("--------------------------------------------------\n\n");
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Demo motions:
+void MotionStretch()
+{
+}
+
+void MotionSquat()
+{
+}
+
+void MotionWalkReady()
+{
+}
+
+void MotionWalk()
+{
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -172,21 +237,41 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	PrintInstruction();
 
+	memset(&vars, 0, sizeof(vars));
+
 	// open CAN channel:
 	if (!OpenCAN())
 		return -1;
 
-	// switch all slaves to Configuration mode:
-	can_lss_switch_mode(CAN_Ch, NODEID_GLOBAL, LSS_MODE_CONFIGURATION);
+	// servo off(make it sure motor drives are in servo-off state):
+	printf("servo off...\n");
+	can_servo_off(CAN_Ch, NODE_ID);
 
-	// LSS identify remote slaves:
-	Sleep(1000);
+	// set mode of operation:
+	printf("set mode of operation...\n");
+	can_set_mode_of_operation(CAN_Ch, NODE_ID, UM_TORQUE);
 
-	// switch all slaves to Operation mode:
-	can_lss_switch_mode(CAN_Ch, NODEID_GLOBAL, LSS_MODE_OPERATION);
+	// servo on:
+	printf("servo on...\n");
+	can_servo_on(CAN_Ch, NODE_ID);
+
+	// start periodic communication:
+	printf("start periodic communication...\n");
 
 	// loop wait user input:
+	printf("main loop...\n");
 	MainLoop();
+
+	// stop periodic communication:
+	printf("stop periodic communication...\n");
+	
+	// flush can messages:
+	printf("flush can messages...\n");
+	can_servo_off(CAN_Ch, NODE_ID);
+
+	// servo off:
+	printf("servo off...\n");
+	can_servo_off(CAN_Ch, NODE_ID);
 
 	// close CAN channel:
 	CloseCAN();

@@ -155,6 +155,7 @@ set( CAN_PRINT_DIAGNOSIS ON CACHE BOOL "" )
 # Build options:
 # ----------------------------------------------------------------------------
 set( BUILD_APPS ON CACHE BOOL "" )
+set( BUILD_CAN_SAMPLES OFF CACHE BOOL "" )
 set( BUILD_TOOLS OFF CACHE BOOL "" )
 
 # ---------------------------------------------------------------------------

@@ -213,6 +213,14 @@ static const char* COBTYPE_NAME(unsigned char fn_code)
 #define NMT_CMD_COMM_RESET			0x82
 
 ////////////////////////////////////////////////
+//  Define Unit Mode:
+#define UM_TORQUE					0x01
+#define UM_SPEED					0x02
+#define UM_MICRO_STEPPER			0x03
+#define UM_POSITION_DUAL_FEEDBACK	0x04
+#define UM_POSITION					0x05
+
+////////////////////////////////////////////////
 //  Utils:
 #ifndef LOBYTE
 #define MAKEWORD(a, b)      ((unsigned short)(((unsigned char)(((unsigned int)(a)) & 0xff)) | ((unsigned short)((unsigned char)(((unsigned int)(b)) & 0xff))) << 8))
