@@ -76,6 +76,7 @@ int can_query_position(int ch, unsigned char node_id);
 // LSS:
 int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode);
 
+
 CANAPI_END
 
 #endif

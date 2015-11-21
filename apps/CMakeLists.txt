@@ -1,5 +1,19 @@
 project( SQ1_EXAMPLES )
 
+if( CAN_PRINT_Rx_MESSAGE )
+	add_definitions( -DCAN_PRINT_Rx_MESSAGE )
+endif()
+
+if( CAN_PRINT_SDO_RESPONSE )
+	add_definitions( -DCAN_PRINT_SDO_RESPONSE )
+endif()
+
+if( CAN_PRINT_DIAGNOSIS )
+	add_definitions( -DCAN_PRINT_DIAGNOSIS )
+endif()
+
+
+# Add demo applications:
 if( BUILD_APPS ) 
 	add_subdirectory( canopen_TxPDO )
 	add_subdirectory( canopen_SDO )

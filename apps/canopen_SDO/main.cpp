@@ -74,7 +74,7 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 					}
 					else
 					{
-						switch (obj_index)
+						/*switch (obj_index)
 						{
 						case OD_DEVICE_TYPE:
 							{
@@ -129,7 +129,7 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 								printf("\tTxPDO%d mapping[%d] = %04X\n", (obj_index-OD_TxPDO1_MAPPING+1), sub_index);
 							}
 							break;
-						}
+						}*/
 					}
 				}
 				break;
@@ -262,14 +262,18 @@ int _tmain(int argc, _TCHAR* argv[])
 	can_query_device_type(CAN_Ch, NODE_ID);
 
 	// query device name:
-	//printf("query device name...\n");
-	//can_query_device_name(CAN_Ch, NODE_ID);
+	printf("query device name...\n");
+	can_query_device_name(CAN_Ch, NODE_ID);
+
+	// query node id:
+	printf("query node id...\n");
+	can_query_node_id(CAN_Ch, NODE_ID);
 	
 	// query H/W, S/W version:
-	//printf("query H/W version...\n");
-	//can_query_hw_version(CAN_Ch, NODE_ID);
-	//printf("query S/W version...\n");
-	//can_query_sw_version(CAN_Ch, NODE_ID);
+	printf("query H/W version...\n");
+	can_query_hw_version(CAN_Ch, NODE_ID);
+	printf("query S/W version...\n");
+	can_query_sw_version(CAN_Ch, NODE_ID);
 	
 	// query PDO mapping:
 	printf("query PDO mapping...\n");

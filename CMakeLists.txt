@@ -145,6 +145,13 @@ set( NI_LIBRARY "${CMAKE_SOURCE_DIR}/lib/x86/NI-CAN/nicanmsc.lib" CACHE PATH "" 
 set( NI_LIBRARY_DEBUG "${CMAKE_SOURCE_DIR}/lib/x86/NI-CAN/nicanmsc.lib" CACHE PATH "" )
 
 # ----------------------------------------------------------------------------
+# Set CAN log level(detail):
+# ----------------------------------------------------------------------------
+set( CAN_PRINT_Rx_MESSAGE OFF CACHE BOOL "" )
+set( CAN_PRINT_SDO_RESPONSE ON CACHE BOOL "" )
+set( CAN_PRINT_DIAGNOSIS ON CACHE BOOL "" )
+
+# ----------------------------------------------------------------------------
 # Build options:
 # ----------------------------------------------------------------------------
 set( BUILD_APPS ON CACHE BOOL "" )

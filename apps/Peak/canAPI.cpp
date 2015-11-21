@@ -284,13 +284,15 @@ int can_open(int ch)
 	assert(ch >= 0 && ch < MAX_BUS);
 
 	DWORD ret;
-
+#ifdef CAN_PRINT_DIAGNOSIS
 	printf("<< CAN: Open Channel...\n");
+#endif
 	ret = initCAN(ch);
 	if (ret != 0) return ret;
+#ifdef CAN_PRINT_DIAGNOSIS
 	printf("\t- Ch.%2d (OK)\n", ch);
 	printf("\t- Done\n");
-
+#endif
 	return 0;
 }
 int can_open_ex(int ch, int type, int index)
@@ -307,8 +309,9 @@ int can_close(int ch)
 
 	TPCANStatus Status = PCAN_ERROR_OK;
 	char strMsg[256];
+#ifdef CAN_PRINT_DIAGNOSIS
 	printf("<< CAN: Close...\n");
-
+#endif
 	Status = CAN_Uninitialize(canDev[ch]);
 	if (Status != PCAN_ERROR_OK)
 	{
@@ -317,29 +320,36 @@ int can_close(int ch)
 		printf("%s\n", strMsg);
 		return Status;
 	}
-
+#ifdef CAN_PRINT_DIAGNOSIS
 	printf("\t- Done\n");
+#endif
 	return 0; // PCAN_ERROR_OK
 }
 
 int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char* buf, unsigned short& buf_len)
 {
 	assert(ch >= 0 && ch < MAX_BUS);
+	assert(buf && buf_len > 0);
 
+#pragma pack(push)
+#pragma pack(1)
 	typedef struct {
 		union {
 			unsigned char d[8];
 			struct {
 				union {
+					// initiate SDO upload protocol (client -> server):
 					struct {
 						unsigned char x1  : 5; // (not used)
 						unsigned char ccs : 3; // client command specifier (client to server)
 					};
+					// upload SDO segment protocol (client -> server):
 					struct {
 						unsigned char x2  : 4; // (not used)
 						unsigned char t   : 1; // toggle bit
 						unsigned char ccs : 3; // client command specifier (client to server)
 					};
+					// upload SDO segment protocol (server -> client):
 					struct {
 						unsigned char s   : 1; // size indicator
 						unsigned char e   : 1; // transfer type;
@@ -347,6 +357,7 @@ int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, un
 						unsigned char x3  : 1; // (not used)
 						unsigned char scs : 3; // server command specifier (server to client)
 					};
+					// upload SDO segment protocol (server -> client):
 					struct {
 						unsigned char x4  : 4; // (not used)
 						unsigned char t   : 1; // toggle bit
@@ -362,16 +373,24 @@ int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, un
 //		const unsigned char& operator[] (const size_t index) const { return d[index]; }
 		operator unsigned char*() { return d; }
 	} TxData;
+#pragma pack(pop)
 
 	unsigned long tx_id;
 	TxData tx_data;
 	unsigned long rx_id;
 	TxData rx_data;
 	unsigned char rx_len;
+#ifdef CAN_PRINT_Rx_MESSAGE
 	unsigned char rx_fn_code; 
 	unsigned char rx_node_id; 
+#endif
 	int err;
-	
+	unsigned short buf_size;
+	int rx_seg_data_index;
+
+	buf_size = buf_len;
+	buf_len = 0;
+
 	tx_id = COB_ID(COBTYPE_RxSDO , node_id);
 
 	// initiate SDO upload protocol
@@ -393,16 +412,33 @@ int can_query_object(int ch, unsigned char node_id, unsigned short obj_index, un
 			if (err) return err;
 		} while (rx_id != COB_ID(COBTYPE_TxSDO, node_id));
 
+#ifdef CAN_PRINT_Rx_MESSAGE
 		rx_fn_code = FN_CODE(rx_id);
 		rx_node_id = NODE_ID(rx_id);
-
-		printf("    %04xh (fn=%s(%d), node=%d, len=%d)", rx_id, COBTYPE_NAME(rx_fn_code), rx_fn_code, rx_node_id, rx_len);
-		for(int nd=0; nd<rx_len; nd++) printf(" %02X ", rx_data[nd]);
+		printf("    %04xh (fn=%s(%d), node=%d, len=%d)", rx_id, COBTYPE_NAME(rx_fn_code), rx_fn_code, rx_node_id, rx_len);		for(int nd=0; nd<rx_len; nd++) printf(" %02X ", rx_data[nd]);
 		printf("\n");
+#endif
+
+		if (rx_data.scs == 4) {
+			printf("<< upload SDO transaction aborted.(error code = %04X %04X)\n", MAKEWORD(rx_data[6], rx_data[7]), MAKEWORD(rx_data[4], rx_data[5]));
+			return MAKELONG(MAKEWORD(rx_data[4], rx_data[5]), MAKEWORD(rx_data[6], rx_data[7]));
+		}
+
+		if (rx_data.e == 1) {
+			for (rx_seg_data_index = 4; rx_seg_data_index < (8-rx_data.n); rx_seg_data_index++)
+				buf[buf_len++] = rx_data[rx_seg_data_index];
+		}
+		else {
+			if (rx_data.scs == 0) {
+				for (rx_seg_data_index = 1; rx_seg_data_index < (8-rx_data.n); rx_seg_data_index++)
+					buf[buf_len++] = rx_data[rx_seg_data_index];
+			}
+		}
 
 		// prepare upload SDO segment request:
 		tx_data.ccs = 3; // upload segment request
-		tx_data.t = !tx_data.t; // toggle bit
+		if (rx_data.scs != 2)
+			tx_data.t = !tx_data.t; // toggle bit
 
 	} while (rx_data.scs != 4 && rx_data.e != 1);
 
@@ -425,9 +461,11 @@ int can_get_message(int ch,
 	fn_code = FN_CODE(Rxid);
 	node_id = NODE_ID(Rxid);
 
+#ifdef CAN_PRINT_Rx_MESSAGE
 	printf("    %04xh (fn=%s(%d), node=%d, len=%d)", Rxid, COBTYPE_NAME(fn_code), fn_code, node_id, len);
 	for(int nd=0; nd<len; nd++) printf(" %02X ", data[nd]);
 	printf("\n");
+#endif
 	
 	return 0;
 }
@@ -515,9 +553,14 @@ int can_query_device_type(int ch, unsigned char node_id)
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
-	
-	err = can_query_object(ch, node_id, OD_DEVICE_TYPE, 0, buf, buf_len);
 
+	err = can_query_object(ch, node_id, OD_DEVICE_TYPE, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tdevice profile number = %d\n", MAKEWORD(buf[2], buf[3]));
+		printf("\tnumber of SDOs supported = %d\n", MAKEWORD(buf[0], buf[1]));
+	}
+#endif
 	return err;
 }
 
@@ -526,9 +569,17 @@ int can_query_device_name(int ch, unsigned char node_id)
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
+	int buf_index;
 	
 	err = can_query_object(ch, node_id, OD_DEVICE_NAME, 0, buf, buf_len);
-
+#ifdef CAN_PRINT_SDO_RESPONSE
+	//if (!err) {
+		printf("\tdevice name = ");
+		for (buf_index = 0; buf_index < buf_len; buf_index++)
+			printf("%c", buf[buf_index]);
+		printf("\n");
+	//}
+#endif
 	return err;
 }
 
@@ -537,9 +588,17 @@ int can_query_hw_version(int ch, unsigned char node_id)
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
+	int buf_index;
 	
 	err = can_query_object(ch, node_id, OD_HW_VERSION, 0, buf, buf_len);
-
+#ifdef CAN_PRINT_SDO_RESPONSE
+	//if (!err) {
+		printf("\tH/W version = ");
+		for (buf_index = 0; buf_index < buf_len; buf_index++)
+			printf("%c", buf[buf_index]);
+		printf("\n");
+	//}
+#endif
 	return err;
 }
 
@@ -548,9 +607,17 @@ int can_query_sw_version(int ch, unsigned char node_id)
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
+	int buf_index;
 	
 	err = can_query_object(ch, node_id, OD_SW_VERSION, 0, buf, buf_len);
-
+#ifdef CAN_PRINT_SDO_RESPONSE
+	//if (!err) {
+		printf("\tS/W version = ");
+		for (buf_index = 0; buf_index < buf_len; buf_index++)
+			printf("%c", buf[buf_index]);
+		printf("\n");
+	//}
+#endif
 	return err;
 }
 
@@ -560,8 +627,12 @@ int can_query_node_id(int ch, unsigned char node_id)
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
 	
-	err = can_query_object(ch, node_id, OD_NODEID, 1, buf, buf_len);
-
+	err = can_query_object(ch, node_id, OD_NODEID, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tnode id = %d\n", buf[0]);
+	}
+#endif
 	return err;
 }
 
@@ -580,7 +651,15 @@ int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 
 	for (int sub_index=1; sub_index<=8; sub_index++) {
 		err = can_query_object(ch, node_id, obj_index, sub_index, buf, buf_len);
-		if (err) return err;
+		if (!err) {
+#ifdef CAN_PRINT_SDO_RESPONSE
+			printf("\tRxPDO%d mapping[%d].obj_index = %04Xh\n", pdo_id, sub_index, MAKEWORD(buf[2], buf[3]));
+			printf("\tRxPDO%d mapping[%d].sub_index = %d\n", pdo_id, sub_index, buf[1]);
+			printf("\tRxPDO%d mapping[%d].obj_length = %d\n", pdo_id, sub_index, buf[0]);
+#endif
+		}
+		else
+			return err;
 	}
 	return 0;
 }
@@ -600,7 +679,15 @@ int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 
 	for (int sub_index=1; sub_index<=8; sub_index++) {
 		err = can_query_object(ch, node_id, obj_index, sub_index, buf, buf_len);
-		if (err) return err;
+		if (!err) {
+#ifdef CAN_PRINT_SDO_RESPONSE
+			printf("\tTxPDO%d mapping[%d].obj_index = %04Xh\n", pdo_id, sub_index, MAKEWORD(buf[2], buf[3]));
+			printf("\tTxPDO%d mapping[%d].sub_index = %d\n", pdo_id, sub_index, buf[1]);
+			printf("\tTxPDO%d mapping[%d].obj_length = %d\n", pdo_id, sub_index, buf[0]);
+#endif
+		}
+		else
+			return err;
 	}
 	return 0;
 }
@@ -612,13 +699,40 @@ int can_query_lss_address(int ch, unsigned char node_id)
 	unsigned short buf_len = 256;
 	
 	err = can_query_object(ch, node_id, OD_LSS_ADDRESS, 1, buf, buf_len); // vendor ID (unsigned32)
-	if (err) return err;
+	if (!err) {
+#ifdef CAN_PRINT_SDO_RESPONSE
+		printf("\tvendor id = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+#endif
+	}
+	else
+		return err;
+
 	err = can_query_object(ch, node_id, OD_LSS_ADDRESS, 2, buf, buf_len); // product ID (unsigned32)
-	if (err) return err;
+	if (!err) {
+#ifdef CAN_PRINT_SDO_RESPONSE
+		printf("\tproduct id = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+#endif
+	}
+	else
+		return err;
+
 	err = can_query_object(ch, node_id, OD_LSS_ADDRESS, 3, buf, buf_len); // revision number (unsigned32)
-	if (err) return err;
+	if (!err) {
+#ifdef CAN_PRINT_SDO_RESPONSE
+		printf("\trevision id = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+#endif
+	}
+	else
+		return err;
+
 	err = can_query_object(ch, node_id, OD_LSS_ADDRESS, 4, buf, buf_len); // serial number (unsigned 32)
-	if (err) return err;
+	if (!err) {
+#ifdef CAN_PRINT_SDO_RESPONSE
+		printf("\tserial id = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+#endif
+	}
+	else
+		return err;
 
 	return 0;
 }
@@ -650,7 +764,6 @@ int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode)
 	
 	return 0;
 }
-
 
 
 CANAPI_END
