@@ -146,7 +146,7 @@ void StopCANListenThread()
 {
 	if (ioThreadRun)
 	{
-		printf(">CAN: stoped listening CAN frames\n");
+		printf(">CAN: stopped listening CAN frames\n");
 		ioThreadRun = false;
 		WaitForSingleObject((HANDLE)ioThread, INFINITE);
 		CloseHandle((HANDLE)ioThread);

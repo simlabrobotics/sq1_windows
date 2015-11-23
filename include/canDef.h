@@ -189,8 +189,8 @@ static const char* COBTYPE_NAME(unsigned char fn_code)
 ////////////////////////////////////////////////
 //  MACRO to get function code, COB-ID, Node-ID:
 #define COB_ID(fn_code, node_id) ((unsigned short)(fn_code<<7 | node_id))
-#define FN_CODE(cob_id) ((cob_id>>7) & 0x0f)
-#define NODE_ID(cob_id) (cob_id & 0x7f)
+#define COB_FN_CODE(cob_id) ((cob_id>>7) & 0x0f)
+#define COB_NODE_ID(cob_id) (cob_id & 0x7f)
 
 ////////////////////////////////////////////////
 //  Define LSS Modes:

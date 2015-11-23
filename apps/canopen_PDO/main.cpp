@@ -24,7 +24,7 @@ USING_NAMESPACE_SQ1
 // for CAN communication
 const double delT = 0.005;
 int CAN_Ch = 0;
-unsigned char NODE_ID = 0x01;
+unsigned char NODE_ID = 0x06;
 bool ioThreadRun = false;
 uintptr_t ioThread = 0;
 int recvNum = 0;
@@ -74,7 +74,11 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 				break;
 
 			case COBTYPE_TxPDO1:
+			case COBTYPE_TxPDO2:
+			case COBTYPE_TxPDO3:
+			case COBTYPE_TxPDO4:
 				{
+					printf("\tTxPDO%d \n", (fn_code-COBTYPE_TxPDO1+1));
 				}
 				break;
 			}
@@ -186,7 +190,7 @@ void StopCANListenThread()
 {
 	if (ioThreadRun)
 	{
-		printf(">CAN: stoped listening CAN frames\n");
+		printf(">CAN: stopped listening CAN frames\n");
 		ioThreadRun = false;
 		WaitForSingleObject((HANDLE)ioThread, INFINITE);
 		CloseHandle((HANDLE)ioThread);
@@ -244,19 +248,24 @@ int _tmain(int argc, _TCHAR* argv[])
 		return -1;
 
 	// servo off(make it sure motor drives are in servo-off state):
-	printf("servo off...\n");
-	can_servo_off(CAN_Ch, NODE_ID);
+//	printf("servo off...\n");
+//	can_servo_off(CAN_Ch, NODE_ID);
 
 	// set mode of operation:
-	printf("set mode of operation...\n");
-	can_set_mode_of_operation(CAN_Ch, NODE_ID, UM_TORQUE);
+//	printf("set mode of operation...\n");
+//	can_set_mode_of_operation(CAN_Ch, NODE_ID, UM_TORQUE);
 
 	// servo on:
-	printf("servo on...\n");
-	can_servo_on(CAN_Ch, NODE_ID);
+//	printf("servo on...\n");
+//	can_servo_on(CAN_Ch, NODE_ID);
+
+	// set communication mode OPERATIONAL:
+	printf("set communication mode OPERATIONAL...\n");
+	can_nmt_node_start(CAN_Ch, NODE_ID);
 
 	// start periodic communication:
 	printf("start periodic communication...\n");
+	StartCANListenThread();
 
 	// loop wait user input:
 	printf("main loop...\n");
@@ -264,14 +273,19 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	// stop periodic communication:
 	printf("stop periodic communication...\n");
+	StopCANListenThread();
 	
+	// set communication mode OPERATIONAL:
+	printf("set communication mode OPERATIONAL...\n");
+	can_nmt_node_stop(CAN_Ch, NODE_ID);
+
 	// flush can messages:
 	printf("flush can messages...\n");
-	can_servo_off(CAN_Ch, NODE_ID);
+	can_flush(CAN_Ch, NODE_ID);
 
 	// servo off:
-	printf("servo off...\n");
-	can_servo_off(CAN_Ch, NODE_ID);
+//	printf("servo off...\n");
+//	can_servo_off(CAN_Ch, NODE_ID);
 
 	// close CAN channel:
 	CloseCAN();

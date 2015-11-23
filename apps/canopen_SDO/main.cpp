@@ -20,7 +20,8 @@
 // for CAN communication
 const double delT = 0.005;
 int CAN_Ch = 0;
-unsigned char NODE_ID = 0x01;
+const unsigned int NODE_COUNT = 3;
+unsigned char NODE_ID[NODE_COUNT] = {0x04, 0x05, 0x06};
 bool ioThreadRun = false;
 uintptr_t ioThread = 0;
 int recvNum = 0;
@@ -232,7 +233,7 @@ void StopCANListenThread()
 {
 	if (ioThreadRun)
 	{
-		printf(">CAN: stoped listening CAN frames\n");
+		printf(">CAN: stopped listening CAN frames\n");
 		ioThreadRun = false;
 		WaitForSingleObject((HANDLE)ioThread, INFINITE);
 		CloseHandle((HANDLE)ioThread);
@@ -262,38 +263,41 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!OpenCAN())
 		return -1;
 
-	// query device type:
-	printf("query device type...\n");
-	can_query_device_type(CAN_Ch, NODE_ID);
+	for (int node_index=0; node_index<NODE_COUNT; node_index++)
+	{
+		// query device type:
+		printf("query device type...\n");
+		can_query_device_type(CAN_Ch, NODE_ID[node_index]);
 
-	// query device name:
-	printf("query device name...\n");
-	can_query_device_name(CAN_Ch, NODE_ID);
+		// query device name:
+		printf("query device name...\n");
+		can_query_device_name(CAN_Ch, NODE_ID[node_index]);
 
-	// query node id:
-	printf("query node id...\n");
-	can_query_node_id(CAN_Ch, NODE_ID);
+		// query node id:
+		printf("query node id...\n");
+		can_query_node_id(CAN_Ch, NODE_ID[node_index]);
 	
-	// query H/W, S/W version:
-	printf("query H/W version...\n");
-	can_query_hw_version(CAN_Ch, NODE_ID);
-	printf("query S/W version...\n");
-	can_query_sw_version(CAN_Ch, NODE_ID);
+		// query H/W, S/W version:
+		printf("query H/W version...\n");
+		can_query_hw_version(CAN_Ch, NODE_ID[node_index]);
+		printf("query S/W version...\n");
+		can_query_sw_version(CAN_Ch, NODE_ID[node_index]);
 	
-	// query PDO mapping:
-	printf("query PDO mapping...\n");
-	can_query_RxPDO_mapping(CAN_Ch, NODE_ID, 1);
-	can_query_RxPDO_mapping(CAN_Ch, NODE_ID, 2);
-	can_query_RxPDO_mapping(CAN_Ch, NODE_ID, 3);
-	can_query_RxPDO_mapping(CAN_Ch, NODE_ID, 4);
-	can_query_TxPDO_mapping(CAN_Ch, NODE_ID, 1);
-	can_query_TxPDO_mapping(CAN_Ch, NODE_ID, 2);
-	can_query_TxPDO_mapping(CAN_Ch, NODE_ID, 3);
-	can_query_TxPDO_mapping(CAN_Ch, NODE_ID, 4);
+		// query PDO mapping:
+		printf("query PDO mapping...\n");
+		can_query_RxPDO_mapping(CAN_Ch, NODE_ID[node_index], 1);
+		can_query_RxPDO_mapping(CAN_Ch, NODE_ID[node_index], 2);
+		can_query_RxPDO_mapping(CAN_Ch, NODE_ID[node_index], 3);
+		can_query_RxPDO_mapping(CAN_Ch, NODE_ID[node_index], 4);
+		can_query_TxPDO_mapping(CAN_Ch, NODE_ID[node_index], 1);
+		can_query_TxPDO_mapping(CAN_Ch, NODE_ID[node_index], 2);
+		can_query_TxPDO_mapping(CAN_Ch, NODE_ID[node_index], 3);
+		can_query_TxPDO_mapping(CAN_Ch, NODE_ID[node_index], 4);
 
-	// query LSS address:
-	printf("query LSS address...\n");
-	can_query_lss_address(CAN_Ch, NODE_ID);
+		// query LSS address:
+		printf("query LSS address...\n");
+		can_query_lss_address(CAN_Ch, NODE_ID[node_index]);
+	}
 
 	// loop wait user input:
 	MainLoop();

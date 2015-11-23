@@ -533,8 +533,8 @@ int can_sdo_request(int ch, unsigned char node_id, unsigned short obj_index, uns
 		} while (rx_id != COB_ID(COBTYPE_TxSDO, node_id));
 
 #ifdef CAN_PRINT_Rx_MESSAGE
-		rx_fn_code = FN_CODE(rx_id);
-		rx_node_id = NODE_ID(rx_id);
+		rx_fn_code = COB_FN_CODE(rx_id);
+		rx_node_id = COB_NODE_ID(rx_id);
 		printf("    %04xh (fn=%s(%d), node=%d, len=%d)", rx_id, COBTYPE_NAME(rx_fn_code), rx_fn_code, rx_node_id, rx_len);
 		for(int nd=0; nd<rx_len; nd++) printf(" %02X ", rx_data[nd]);
 		printf("\n");
@@ -681,7 +681,7 @@ int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 
 	err = can_sdo_request(ch, node_id, obj_index, 0, buf, buf_len);
 	if (!err) {
-		entry_num = buf[2];
+		entry_num = buf[0];
 #ifdef CAN_PRINT_SDO_RESPONSE
 		printf("\tRxPDO%d mapping.num_of_entries = %d\n", pdo_id, entry_num);
 #endif
@@ -720,7 +720,7 @@ int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 
 	err = can_sdo_request(ch, node_id, obj_index, 0, buf, buf_len);
 	if (!err) {
-		entry_num = buf[2];
+		entry_num = buf[0];
 #ifdef CAN_PRINT_SDO_RESPONSE
 		printf("\tTxPDO%d mapping.num_of_entries = %d\n", pdo_id, entry_num);
 #endif
@@ -906,8 +906,8 @@ int can_get_message(int ch,
 	err = canReadMsg(ch, Rxid, len, data, blocking);
 	if (err) return err;
 
-	fn_code = FN_CODE(Rxid);
-	node_id = NODE_ID(Rxid);
+	fn_code = COB_FN_CODE(Rxid);
+	node_id = COB_NODE_ID(Rxid);
 
 #ifdef CAN_PRINT_Rx_MESSAGE
 	printf("    %04xh (fn=%s(%d), node=%d, len=%d)", Rxid, COBTYPE_NAME(fn_code), fn_code, node_id, len);
@@ -923,6 +923,35 @@ int can_dump_slave(int ch, unsigned char node_id)
 	return 0;
 }
 
+int can_flush(int ch, unsigned char node_id)
+{
+	unsigned long rx_id;
+	unsigned char rx_data[8];
+	unsigned char rx_len;
+#ifdef CAN_PRINT_Rx_MESSAGE
+	unsigned char rx_fn_code; 
+	unsigned char rx_node_id; 
+#endif
+	int err;
+
+	do {
+		err = canReadMsg(ch, rx_id, rx_len, rx_data, false);
+		if (PCAN_ERROR_QRCVEMPTY == err)
+			return 0; // flush returns normally(no remaining messages)
+		else if (err)
+			return err; // flush returns with error
+
+#ifdef CAN_PRINT_Rx_MESSAGE
+		rx_fn_code = COB_FN_CODE(rx_id);
+		rx_node_id = COB_NODE_ID(rx_id);
+		printf("    %04xh (fn=%s(%d), node=%d, len=%d)", rx_id, COBTYPE_NAME(rx_fn_code), rx_fn_code, rx_node_id, rx_len);
+		for(int nd=0; nd<rx_len; nd++) printf(" %02X ", rx_data[nd]);
+		printf("\n");
+#endif
+	} while (true);
+
+	return -1; // should not reach here!
+}
 
 
 CANAPI_END
