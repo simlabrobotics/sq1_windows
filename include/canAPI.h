@@ -52,13 +52,15 @@ int can_nmt_hard_reset(); // It is recommended that you turn off the motor and k
 
 // SYNC and Time Stamp:
 int can_sync(int ch);
+// Time Stamp:
 int can_timestamp(int ch);
 
 // PDO:
 
 
 // SDO:
-int can_sdo_request(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char* buf, unsigned short& buf_len);  // send single SDO query
+int can_sdo_download(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char* buf, unsigned short buf_len); // download data using an SDO
+int can_sdo_upload(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char* buf, unsigned short& buf_len); // upload data using an SDO
 
 // SDO queries:
 int can_query_device_type(int ch, unsigned char node_id);
@@ -72,7 +74,9 @@ int can_query_TxPDO_params(int ch, unsigned char node_id, unsigned char pdo_id);
 int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id);
 int can_query_lss_address(int ch, unsigned char node_id);
 int can_query_position(int ch, unsigned char node_id);
-
+int can_query_control_word(int ch, unsigned char node_id);
+int can_query_status_word(int ch, unsigned char node_id);
+int can_query_mode_of_operation_display(int ch, unsigned char node_id);
 
 // Binary interpreter:
 int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len);

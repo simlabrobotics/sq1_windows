@@ -148,6 +148,7 @@ set( NI_LIBRARY_DEBUG "${CMAKE_SOURCE_DIR}/lib/x86/NI-CAN/nicanmsc.lib" CACHE PA
 # Set CAN log level(detail):
 # ----------------------------------------------------------------------------
 set( CAN_PRINT_Rx_MESSAGE OFF CACHE BOOL "" )
+set( CAN_PRINT_Tx_MESSAGE OFF CACHE BOOL "" )
 set( CAN_PRINT_SDO_RESPONSE ON CACHE BOOL "" )
 set( CAN_PRINT_DIAGNOSIS ON CACHE BOOL "" )
 

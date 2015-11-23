@@ -284,11 +284,25 @@ int _tmain(int argc, _TCHAR* argv[])
 		can_query_sw_version(CAN_Ch, NODE_ID[node_index]);
 	
 		// query PDO mapping:
-		printf("query PDO mapping...\n");
+		printf("query RxPDO communication parameters...\n");
+		can_query_RxPDO_params(CAN_Ch, NODE_ID[node_index], 1);
+		can_query_RxPDO_params(CAN_Ch, NODE_ID[node_index], 2);
+		can_query_RxPDO_params(CAN_Ch, NODE_ID[node_index], 3);
+		can_query_RxPDO_params(CAN_Ch, NODE_ID[node_index], 4);
+
+		printf("query RxPDO mapping...\n");
 		can_query_RxPDO_mapping(CAN_Ch, NODE_ID[node_index], 1);
 		can_query_RxPDO_mapping(CAN_Ch, NODE_ID[node_index], 2);
 		can_query_RxPDO_mapping(CAN_Ch, NODE_ID[node_index], 3);
 		can_query_RxPDO_mapping(CAN_Ch, NODE_ID[node_index], 4);
+		
+		printf("query TxPDO communication parameters...\n");
+		can_query_TxPDO_params(CAN_Ch, NODE_ID[node_index], 1);
+		can_query_TxPDO_params(CAN_Ch, NODE_ID[node_index], 2);
+		can_query_TxPDO_params(CAN_Ch, NODE_ID[node_index], 3);
+		can_query_TxPDO_params(CAN_Ch, NODE_ID[node_index], 4);
+
+		printf("query TxPDO mapping...\n");
 		can_query_TxPDO_mapping(CAN_Ch, NODE_ID[node_index], 1);
 		can_query_TxPDO_mapping(CAN_Ch, NODE_ID[node_index], 2);
 		can_query_TxPDO_mapping(CAN_Ch, NODE_ID[node_index], 3);
@@ -297,6 +311,18 @@ int _tmain(int argc, _TCHAR* argv[])
 		// query LSS address:
 		printf("query LSS address...\n");
 		can_query_lss_address(CAN_Ch, NODE_ID[node_index]);
+
+		// query control word:
+		printf("query control word...\n");
+		can_query_control_word(CAN_Ch, NODE_ID[node_index]);
+
+		// query status word:
+		printf("query status word...\n");
+		can_query_status_word(CAN_Ch, NODE_ID[node_index]);
+
+		// query mode of operation:
+		printf("query mode of operation...\n");
+		can_query_mode_of_operation_display(CAN_Ch, NODE_ID[node_index]);
 	}
 
 	// loop wait user input:

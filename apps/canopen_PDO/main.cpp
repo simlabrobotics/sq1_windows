@@ -108,6 +108,10 @@ void MainLoop()
 			case 'q':
 				bRun = false;
 				break;
+
+			case 's':
+				can_sync(CAN_Ch);
+				break;
 			
 			case '1':
 				MotionStretch();
@@ -259,6 +263,10 @@ int _tmain(int argc, _TCHAR* argv[])
 //	printf("servo on...\n");
 //	can_servo_on(CAN_Ch, NODE_ID);
 
+	// PDO mapping:
+	printf("PDO mapping...\n");
+	can_pdo_map(CAN_Ch, NODE_ID);
+
 	// set communication mode OPERATIONAL:
 	printf("set communication mode OPERATIONAL...\n");
 	can_nmt_node_start(CAN_Ch, NODE_ID);
@@ -276,7 +284,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	StopCANListenThread();
 	
 	// set communication mode OPERATIONAL:
-	printf("set communication mode OPERATIONAL...\n");
+	printf("set communication mode STOPPED...\n");
 	can_nmt_node_stop(CAN_Ch, NODE_ID);
 
 	// flush can messages:
