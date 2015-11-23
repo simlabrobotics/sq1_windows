@@ -670,6 +670,7 @@ int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
+	unsigned char entry_num; // number of sub-entries
 
 	unsigned short obj_index = 
 		(pdo_id == 1 ? OD_RxPDO1_MAPPING :
@@ -678,7 +679,17 @@ int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 		(pdo_id == 4 ? OD_RxPDO4_MAPPING : 0))));
 	if (!obj_index) return -1;
 
-	for (int sub_index=1; sub_index<=8; sub_index++) {
+	err = can_sdo_request(ch, node_id, obj_index, 0, buf, buf_len);
+	if (!err) {
+		entry_num = buf[2];
+#ifdef CAN_PRINT_SDO_RESPONSE
+		printf("\tRxPDO%d mapping.num_of_entries = %d\n", pdo_id, entry_num);
+#endif
+	}
+	else
+		return err;
+
+	for (int sub_index=1; sub_index<=entry_num; sub_index++) {
 		err = can_sdo_request(ch, node_id, obj_index, sub_index, buf, buf_len);
 		if (!err) {
 #ifdef CAN_PRINT_SDO_RESPONSE
@@ -698,6 +709,7 @@ int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
+	unsigned char entry_num; // number of sub-entries
 	
 	unsigned short obj_index = 
 		(pdo_id == 1 ? OD_TxPDO1_MAPPING :
@@ -706,7 +718,17 @@ int can_query_TxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 		(pdo_id == 4 ? OD_TxPDO4_MAPPING : 0))));
 	if (!obj_index) return -1;
 
-	for (int sub_index=1; sub_index<=8; sub_index++) {
+	err = can_sdo_request(ch, node_id, obj_index, 0, buf, buf_len);
+	if (!err) {
+		entry_num = buf[2];
+#ifdef CAN_PRINT_SDO_RESPONSE
+		printf("\tTxPDO%d mapping.num_of_entries = %d\n", pdo_id, entry_num);
+#endif
+	}
+	else
+		return err;
+
+	for (int sub_index=1; sub_index<=entry_num; sub_index++) {
 		err = can_sdo_request(ch, node_id, obj_index, sub_index, buf, buf_len);
 		if (!err) {
 #ifdef CAN_PRINT_SDO_RESPONSE

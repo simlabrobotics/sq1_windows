@@ -161,9 +161,5 @@ set( BUILD_TOOLS OFF CACHE BOOL "" )
 # ---------------------------------------------------------------------------
 # Build libraries and plug-ins:
 # ---------------------------------------------------------------------------
-if( BUILD_APPS ) 
-	add_subdirectory( apps )
-endif()
-if( BUILD_TOOLS )
-	add_subdirectory( tools )
-endif()
+add_subdirectory( apps )
+add_subdirectory( tools )
