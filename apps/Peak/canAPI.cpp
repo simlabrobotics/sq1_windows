@@ -665,6 +665,51 @@ int can_query_node_id(int ch, unsigned char node_id)
 	return err;
 }
 
+int can_query_RxPDO_params(int ch, unsigned char node_id, unsigned char pdo_id)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	unsigned char entry_num; // number of sub-entries
+
+	unsigned short obj_index = 
+		(pdo_id == 1 ? OD_RxPDO1_COMM_PARAM :
+		(pdo_id == 2 ? OD_RxPDO2_COMM_PARAM :
+		(pdo_id == 3 ? OD_RxPDO3_COMM_PARAM :
+		(pdo_id == 4 ? OD_RxPDO4_COMM_PARAM : 0))));
+	if (!obj_index) return -1;
+
+	/*err = can_sdo_request(ch, node_id, obj_index, 0, buf, buf_len);
+	if (!err) {
+		entry_num = buf[2];
+#ifdef CAN_PRINT_SDO_RESPONSE
+		printf("\tRxPDO%d mapping.num_of_entries = %d\n", pdo_id, entry_num);
+#endif
+	}
+	else
+		return err;*/
+	entry_num = 5;
+	static const char* entry_name[] = {
+		"COB-ID used by PDO",
+		"Transmission type",
+		"Inhibit time",
+		"reserved",
+		"Event timer"
+	};
+
+	for (int sub_index=1; sub_index<=2; sub_index++) {
+		err = can_sdo_request(ch, node_id, obj_index, sub_index, buf, buf_len);
+		if (!err) {
+#ifdef CAN_PRINT_SDO_RESPONSE
+			printf("\tRxPDO%d communication param[%s] = %04Xh %04Xh\n", pdo_id, entry_name[sub_index], MAKEWORD(buf[2], buf[3]), MAKEWORD(buf[0], buf[1]));
+#endif
+		}
+		else
+			return err;
+	}
+	return 0;
+}
+
 int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 {
 	int err;
@@ -696,6 +741,51 @@ int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id)
 			printf("\tRxPDO%d mapping[%d].obj_index = %04Xh\n", pdo_id, sub_index, MAKEWORD(buf[2], buf[3]));
 			printf("\tRxPDO%d mapping[%d].sub_index = %d\n", pdo_id, sub_index, buf[1]);
 			printf("\tRxPDO%d mapping[%d].obj_length = %d\n", pdo_id, sub_index, buf[0]);
+#endif
+		}
+		else
+			return err;
+	}
+	return 0;
+}
+
+int can_query_TxPDO_params(int ch, unsigned char node_id, unsigned char pdo_id)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	unsigned char entry_num; // number of sub-entries
+
+	unsigned short obj_index = 
+		(pdo_id == 1 ? OD_TxPDO1_COMM_PARAM :
+		(pdo_id == 2 ? OD_TxPDO2_COMM_PARAM :
+		(pdo_id == 3 ? OD_TxPDO3_COMM_PARAM :
+		(pdo_id == 4 ? OD_TxPDO4_COMM_PARAM : 0))));
+	if (!obj_index) return -1;
+
+	/*err = can_sdo_request(ch, node_id, obj_index, 0, buf, buf_len);
+	if (!err) {
+		entry_num = buf[2];
+#ifdef CAN_PRINT_SDO_RESPONSE
+		printf("\tTxPDO%d mapping.num_of_entries = %d\n", pdo_id, entry_num);
+#endif
+	}
+	else
+		return err;*/
+	entry_num = 5;
+	static const char* entry_name[] = {
+		"COB-ID used by PDO",
+		"Transmission type",
+		"Inhibit time",
+		"reserved",
+		"Event timer"
+	};
+
+	for (int sub_index=1; sub_index<=entry_num; sub_index++) {
+		err = can_sdo_request(ch, node_id, obj_index, sub_index, buf, buf_len);
+		if (!err) {
+#ifdef CAN_PRINT_SDO_RESPONSE
+			printf("\tTxPDO%d communication param[%s] = %04Xh %04Xh\n", pdo_id, entry_name[sub_index], MAKEWORD(buf[2], buf[3]), MAKEWORD(buf[0], buf[1]));
 #endif
 		}
 		else
