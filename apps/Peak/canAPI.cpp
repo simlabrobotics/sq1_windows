@@ -1079,22 +1079,22 @@ int can_pdo_map(int ch, unsigned char node_id)
 	if (err) return err;
 
 	// map digital input as the next 4 bytes of the PDO:
-	buf[0] = 32;
+	/*buf[0] = 32;
 	buf[1] = 0;
 	buf[2] = LOBYTE(OD_DIGITAL_INPUT);
 	buf[3] = HIBYTE(OD_DIGITAL_INPUT);
 	buf_len = 4;
 	err = can_sdo_download(ch, node_id, OD_TxPDO1_MAPPING, (++entry_num), buf, buf_len);
-	if (err) return err;
+	if (err) return err;*/
 
 	// map status word as the next 2 bytes of the PDO:
-	/*buf[0] = 16;
+	buf[0] = 16;
 	buf[1] = 0;
 	buf[2] = LOBYTE(OD_STATUSWORD);
 	buf[3] = HIBYTE(OD_STATUSWORD);
 	buf_len = 4;
 	err = can_sdo_download(ch, node_id, OD_TxPDO1_MAPPING, (++entry_num), buf, buf_len);
-	if (err) return err;*/
+	if (err) return err;
 
 	// set transmission type in PDO communication parameters to "Transmit every SYNC":
 	buf[0] = 1;
@@ -1117,16 +1117,54 @@ int can_pdo_map(int ch, unsigned char node_id)
 	return 0;
 }
 
-int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned short opmode)
+int can_servo_on(int ch, unsigned char node_id, unsigned short control_word)
 {
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	unsigned char entry_num = 0;
+
+	control_word &= 0xFF70; // masking irrelevant bits
+	control_word |= 0x0F;
+	buf[0] = LOBYTE(control_word);
+	buf[1] = HIBYTE(control_word);
+	buf_len = 2;
+	err = can_sdo_download(ch, node_id, OD_CONTROLWORD, 0, buf, buf_len);
+	if (err) return err;
+
 	return 0;
 }
-int can_servo_on(int ch, unsigned char node_id)
+
+int can_servo_off(int ch, unsigned char node_id, unsigned short control_word)
 {
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	unsigned char entry_num = 0;
+
+	control_word &= 0xFF7D; // masking irrelevant bits
+	control_word |= 0x00;
+	buf[0] = LOBYTE(control_word);
+	buf[1] = HIBYTE(control_word);
+	buf_len = 2;
+	err = can_sdo_download(ch, node_id, OD_CONTROLWORD, 0, buf, buf_len);
+	if (err) return err;
+
 	return 0;
 }
-int can_servo_off(int ch, unsigned char node_id)
+
+int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned char opmode)
 {
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	unsigned char entry_num = 0;
+
+	buf[0] = opmode;
+	buf_len = 1;
+	err = can_sdo_download(ch, node_id, OD_MODE_OF_OPERATION, 0, buf, buf_len);
+	if (err) return err;
+
 	return 0;
 }
 

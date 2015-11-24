@@ -88,12 +88,16 @@ int can_os_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigne
 // LSS:
 int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode);
 
-// object dictionary:
+// system initialization & setup:
 int can_sys_init(int ch, unsigned char node_id, int period_msec);
 int can_pdo_map(int ch, unsigned char node_id);
-int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned short opmode);
-int can_servo_on(int ch, unsigned char node_id);
-int can_servo_off(int ch, unsigned char node_id);
+
+// device control:
+int can_servo_on(int ch, unsigned char node_id, unsigned short control_word);
+int can_servo_off(int ch, unsigned char node_id, unsigned short control_word);
+int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned char opmode);
+
+//
 int can_write_PT(int ch, unsigned char node_id, unsigned short position);
 int can_store_params(int ch, unsigned char node_id);
 int can_restore_params(int ch, unsigned char node_id);

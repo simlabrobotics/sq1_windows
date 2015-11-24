@@ -1,4 +1,4 @@
-/* mySQ1.cpp : Defines the entry point for the console application.
+/* canopen_PDO: demonstrate CANopen PDO transmission.
  *
  * Copyright (c) 2016 SimLab Co., Ltd. http://www.simlab.co.kr/
  * 
@@ -93,12 +93,18 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 void MainLoop()
 {
 	bool bRun = true;
+	static int sync_counter = 0;
 
 	while (bRun)
 	{
 		if (!_kbhit())
 		{
 			Sleep(5);
+			sync_counter++;
+			if (sync_counter == 100) {
+				can_sync(CAN_Ch);
+				sync_counter++;
+			}
 		}
 		else
 		{
@@ -113,18 +119,6 @@ void MainLoop()
 				can_sync(CAN_Ch);
 				break;
 			
-			case '1':
-				MotionStretch();
-				break;
-
-			case '2':
-				MotionSquat();
-				break;
-
-			case '3':
-				MotionWalkReady();
-				break;
-
 			case '4':
 				MotionWalk();
 				break;
@@ -207,15 +201,10 @@ void StopCANListenThread()
 void PrintInstruction()
 {
 	printf("--------------------------------------------------\n");
-	printf("mySQ1: ");
+	printf("CANopen PDO demo: ");
 
 	printf("Keyboard Commands:\n");
-	printf("1: Stretch All Legs Downwards\n");
-	printf("2: Squat Motion\n");	
-	printf("3: Walk-Ready Position\n");
-	printf("4: Start Walk\n");
-
-	printf("E: E-STOP\n");
+	printf("S: Update encoder & DI values\n");
 	printf("Q: Quit this program\n");
 
 	printf("--------------------------------------------------\n\n");
@@ -251,18 +240,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!OpenCAN())
 		return -1;
 
-	// servo off(make it sure motor drives are in servo-off state):
-//	printf("servo off...\n");
-//	can_servo_off(CAN_Ch, NODE_ID);
-
-	// set mode of operation:
-//	printf("set mode of operation...\n");
-//	can_set_mode_of_operation(CAN_Ch, NODE_ID, UM_TORQUE);
-
-	// servo on:
-//	printf("servo on...\n");
-//	can_servo_on(CAN_Ch, NODE_ID);
-
 	// PDO mapping:
 	printf("PDO mapping...\n");
 	can_pdo_map(CAN_Ch, NODE_ID);
@@ -290,10 +267,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	// flush can messages:
 	printf("flush can messages...\n");
 	can_flush(CAN_Ch, NODE_ID);
-
-	// servo off:
-//	printf("servo off...\n");
-//	can_servo_off(CAN_Ch, NODE_ID);
 
 	// close CAN channel:
 	CloseCAN();

@@ -1,4 +1,4 @@
-/* mySQ1.cpp : Defines the entry point for the console application.
+/* app_SQ1 : Defines the entry point for the console application.
  *
  * Copyright (c) 2016 SimLab Co., Ltd. http://www.simlab.co.kr/
  * 
@@ -31,6 +31,8 @@ int recvNum = 0;
 int sendNum = 0;
 double statTime = -1.0;
 sQ1_RobotMemory_t vars;
+unsigned short controlWord = 0;
+unsigned short statusWord = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // functions declarations
@@ -245,15 +247,15 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	// servo off(make it sure motor drives are in servo-off state):
 	printf("servo off...\n");
-	can_servo_off(CAN_Ch, NODE_ID);
+	can_servo_off(CAN_Ch, NODE_ID, controlWord);
 
 	// set mode of operation:
 	printf("set mode of operation...\n");
-	can_set_mode_of_operation(CAN_Ch, NODE_ID, UM_TORQUE);
+	can_set_mode_of_operation(CAN_Ch, NODE_ID, OP_MODE_PROFILED_POSITION);
 
 	// servo on:
 	printf("servo on...\n");
-	can_servo_on(CAN_Ch, NODE_ID);
+	can_servo_on(CAN_Ch, NODE_ID, controlWord);
 
 	// start periodic communication:
 	printf("start periodic communication...\n");
@@ -267,11 +269,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 	// flush can messages:
 	printf("flush can messages...\n");
-	can_servo_off(CAN_Ch, NODE_ID);
+	can_servo_off(CAN_Ch, NODE_ID, controlWord);
 
 	// servo off:
 	printf("servo off...\n");
-	can_servo_off(CAN_Ch, NODE_ID);
+	can_servo_off(CAN_Ch, NODE_ID, controlWord);
 
 	// close CAN channel:
 	CloseCAN();

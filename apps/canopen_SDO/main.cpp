@@ -1,4 +1,4 @@
-/* enum_devices: enumerate all canopen slave nodes using LSS(Layer Setting Services).
+/* canopen_SDO: demonstrate CANopen SDO transmission.
  *
  * Copyright (c) 2016 SimLab Co., Ltd. http://www.simlab.co.kr/
  * 
@@ -246,7 +246,7 @@ void StopCANListenThread()
 void PrintInstruction()
 {
 	printf("--------------------------------------------------\n");
-	printf("enum devices: \n\n");
+	printf("CANopen SDO: \n\n");
 
 	printf("Keyboard Commands:\n");
 	printf("Q: Quit this program\n");
