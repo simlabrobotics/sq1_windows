@@ -301,8 +301,8 @@ static const char* COBTYPE_NAME(unsigned char fn_code)
 #define OD_VELOCITY_DIMENSION_INDEX				0x608C // This is used together with the velocity notation index to define a unit. R/W N
 #define OD_ACCELERATION_NOTATION_INDEX			0x608D // The unit is defined by the physical dimensions and calculated by unit type and exponent. R/W N
 #define OD_ACCELERATION_DIMENSION_INDEX			0x608E // This defines the acceleration dimension index, which is used together with the acceleration notation index (object 0x608D) to define a unit. R/W N
-#define OD_POSITION_ENC_RESOLUTION				0x608F // Defines relation between motor revolution and position increments. R/W N
-#define OD_Velocity_encoder_resolution			0x6090 // Defines ratio of encoder increments/sec per motor revolutions/sec. R/W N
+#define OD_POSITION_ENCODER_RESOLUTION			0x608F // Defines relation between motor revolution and position increments. R/W N
+#define OD_VELOCITY_ENCODER_RESOLUTION			0x6090 // Defines ratio of encoder increments/sec per motor revolutions/sec. R/W N
 #define OD_POSITION_FACTOR						0x6093 // Converts position in user units to position in internal increments. R/W N
 #define OD_VELOCITY_ENCODER_FACTOR				0x6094 // Converts desired velocity in velocity units into internal increments/sec. R/W N
 #define OD_VELOCITY_FACTOR_1					0x6095 // Converts motor data into velocity data. R/W N

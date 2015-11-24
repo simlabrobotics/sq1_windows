@@ -324,6 +324,14 @@ int _tmain(int argc, _TCHAR* argv[])
 		printf("query mode of operation...\n");
 		can_query_mode_of_operation_display(CAN_Ch, NODE_ID[node_index]);
 
+		// query homing parameters:
+		printf("query homing parameters...\n");
+		can_dump_homing_params(CAN_Ch, NODE_ID[node_index]);
+
+		// query unit factors:
+		printf("query unit factors...\n");
+		can_dump_factors(CAN_Ch, NODE_ID[node_index]);
+
 		// query motion profile:
 		printf("query motion profile...\n");
 		can_dump_motion_profile(CAN_Ch, NODE_ID[node_index]);

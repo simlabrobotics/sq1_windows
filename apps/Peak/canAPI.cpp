@@ -1058,8 +1058,11 @@ int can_pdo_map(int ch, unsigned char node_id)
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
-	unsigned char entry_num = 0;
+	unsigned char entry_num;
 
+	//////////////////////////////////////////////////////
+	// mapping TxPDO1:
+	entry_num = 0;
 	// stop all emissions of TPDO1:
 	buf[0] = 0x00;
 	buf[1] = 0x00;
@@ -1112,6 +1115,54 @@ int can_pdo_map(int ch, unsigned char node_id)
 	buf[3] = 0x00;
 	buf_len = 1;
 	err = can_sdo_download(ch, node_id, OD_TxPDO1_MAPPING, 0, buf, buf_len);
+	if (err) return err;
+
+	//////////////////////////////////////////////////////
+	// mapping RxPDO1:
+	entry_num = 0;
+	// stop receiving of RPDO1:
+	buf[0] = 0x00;
+	buf[1] = 0x00;
+	buf[2] = 0x00;
+	buf[3] = 0x00;
+	buf_len = 1;
+	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, 0, buf, buf_len);
+	if (err) return err;
+
+	// map profile target position as the 1st 4 bytes of the PDO:
+	buf[0] = 32;
+	buf[1] = 0;
+	buf[2] = LOBYTE(OD_PROFILED_TARGET_POSITION);
+	buf[3] = HIBYTE(OD_PROFILED_TARGET_POSITION);
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
+	if (err) return err;
+
+	// map control word as the next 2 bytes of the PDO:
+	buf[0] = 16;
+	buf[1] = 0;
+	buf[2] = LOBYTE(OD_CONTROLWORD);
+	buf[3] = HIBYTE(OD_CONTROLWORD);
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
+	if (err) return err;
+
+	// set transmission type in PDO communication parameters to "Transmit every SYNC":
+	/*buf[0] = 1;
+	buf[1] = 0x00;
+	buf[2] = 0x00;
+	buf[3] = 0x00;
+	buf_len = 1;
+	err = can_sdo_download(ch, node_id, OD_RxPDO1_COMM_PARAM, 2, buf, buf_len);
+	if (err) return err;*/
+
+	// activate the mapped objects:
+	buf[0] = entry_num;
+	buf[1] = 0x00;
+	buf[2] = 0x00;
+	buf[3] = 0x00;
+	buf_len = 1;
+	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, 0, buf, buf_len);
 	if (err) return err;
 
 	return 0;
@@ -1371,6 +1422,206 @@ int can_dump_motion_profile(int ch, unsigned char node_id)
 #ifdef CAN_PRINT_SDO_RESPONSE
 	if (!err) {
 		printf("\tMotion profile type = %d\n", MAKEWORD(buf[0], buf[1]));
+	}
+#endif
+
+	return 0;
+}
+
+int can_dump_factors(int ch, unsigned char node_id)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	
+	err = can_sdo_upload(ch, node_id, OD_POLARITY, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tPosition polarity = %d\n", (buf[0]&0x80 ? -1 : 1));
+		printf("\tVelocity polarity = %d\n", (buf[0]&0x40 ? -1 : 1));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_POISTION_NOTATION_INDEX, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tPosition notation index = %d\n", buf[0]);
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_POISTION_DIMENSION_INDEX, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tPosition dimension index = %u\n", buf[0]);
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_NOTATION_INDEX, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tVelocity notation index = %d\n", buf[0]);
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_DIMENSION_INDEX, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tVelocity dimension index = %u\n", buf[0]);
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_ACCELERATION_NOTATION_INDEX, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tAcceleration notation index = %d\n", buf[0]);
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_ACCELERATION_DIMENSION_INDEX, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tAcceleration dimension index = %u\n", buf[0]);
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_POSITION_ENCODER_RESOLUTION, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tEncoder increments = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+	err = can_sdo_upload(ch, node_id, OD_POSITION_ENCODER_RESOLUTION, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tMotor revolutions = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_ENCODER_RESOLUTION, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tEncoder increments per second = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_ENCODER_RESOLUTION, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tMotor revolutions per second = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_POSITION_FACTOR, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tPosition factor (Numerator) = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_POSITION_FACTOR, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tPosition factor (Divisor) = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_ENCODER_FACTOR, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tVelocity encoder factor (Numerator) = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_ENCODER_FACTOR, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tVelocity encoder factor (Divisor) = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_FACTOR_1, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tVelocity factor 1 (Numerator) = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_FACTOR_1, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tVelocity factor 1 (Divisor) = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_FACTOR_2, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tVelocity factor 2 (Numerator) = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_VELOCITY_FACTOR_2, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tVelocity factor 2 (Divisor) = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_ACCELERATION_FACTOR, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tAcceleration factor (Numerator) = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_ACCELERATION_FACTOR, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tAcceleration factor (Divisor) = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	return 0;
+}
+
+int can_dump_homing_params(int ch, unsigned char node_id)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	
+	err = can_sdo_upload(ch, node_id, OD_HOMING_OFFSET, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tHoming offset = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_HOMING_METHOD, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tHoming method = %d\n", buf[0]);
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_HOMING_SPEED, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tHoming speed during search for switch = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_HOMING_SPEED, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tHoming speed during search for zero = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_HOMING_ACCELERATION, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tHoming acceleration = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
 	}
 #endif
 

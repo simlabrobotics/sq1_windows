@@ -105,6 +105,8 @@ int can_restore_params(int ch, unsigned char node_id);
 // utilities:
 int can_dump_slave(int ch, unsigned char node_id);
 int can_dump_motion_profile(int ch, unsigned char node_id);
+int can_dump_factors(int ch, unsigned char node_id);
+int can_dump_homing_params(int ch, unsigned char node_id);
 int can_get_message(int ch, unsigned char& fn_code, unsigned char& node_id, unsigned char& len, unsigned char* data, bool blocking);
 int can_flush(int ch, unsigned char node_id);
 
