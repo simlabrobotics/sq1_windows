@@ -31,6 +31,8 @@ int recvNum = 0;
 int sendNum = 0;
 double statTime = -1.0;
 sQ1_RobotMemory_t vars;
+long targetPosition = 0;
+unsigned char modeOfOperation = OP_MODE_NO_MODE;
 unsigned short controlWord = 0;
 unsigned short statusWord = 0;
 
@@ -43,6 +45,16 @@ void CloseCAN();
 void StartCANListenThread();
 void StopCANListenThread();
 extern int getPCANChannelIndex(const char* cname);
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// device control
+void SetModeOfOperation();
+void SetTargetPosition();
+void ReadyToSwitchOn();
+void SwitchedOn();
+void OperationEnable();
+void Shutdown();
+
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // motion declarations
@@ -103,7 +115,12 @@ void MainLoop()
 		{
 			Sleep(5);
 			sync_counter++;
-			if (sync_counter == 100) {
+			if (sync_counter == 400) {
+				
+				can_pdo_rx1(CAN_Ch, NODE_ID, targetPosition, modeOfOperation, controlWord);
+				controlWord &= 0xFF8F; // masking irrelevant bits
+				controlWord |= 0x00; // clear all operation mode specific bits
+				
 				can_sync(CAN_Ch);
 				sync_counter = 0;
 			}
@@ -122,19 +139,27 @@ void MainLoop()
 				break;
 			
 			case '1':
-				MotionStretch();
+				SetModeOfOperation();
 				break;
 
 			case '2':
-				MotionSquat();
+				ReadyToSwitchOn();
 				break;
 
 			case '3':
-				MotionWalkReady();
+				SwitchedOn();
 				break;
 
 			case '4':
-				MotionWalk();
+				OperationEnable();
+				break;
+
+			case '5':
+				SetTargetPosition();
+				break;
+
+			case '6':
+				Shutdown();
 				break;
 			}
 		}
@@ -231,9 +256,66 @@ void PrintInstruction()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
+// device control:
+void SetModeOfOperation()
+{
+	printf("set mode of operation...\n");
+	modeOfOperation = OP_MODE_PROFILED_POSITION;
+}
+
+void SetTargetPosition()
+{
+	printf("set target position...\n");
+	targetPosition = 0;
+	controlWord &= 0xFF8F; // masking irrelevant bits
+	controlWord |= 0x2070; // set new point, target position is relative
+}
+
+void ReadyToSwitchOn()
+{
+	printf("ready to switch on...\n");
+	controlWord &= 0xFF78; // masking irrelevant bits
+	controlWord |= 0x06;
+}
+
+void SwitchedOn()
+{
+	printf("switched on...\n");
+	controlWord &= 0xFF70; // masking irrelevant bits
+	controlWord |= 0x07;
+}
+
+void OperationEnable()
+{
+	printf("operation enable...\n");
+	controlWord &= 0xFF70; // masking irrelevant bits
+	controlWord |= 0x0F;
+}
+
+void Shutdown()
+{
+	printf("shutdown...\n");
+	//controlWord &= 0xFF7D; // masking irrelevant bits
+	//controlWord |= 0x00;
+	controlWord = 0x00;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
 // Demo motions:
 void MotionStretch()
 {
+
+
+	//unsigned short control_word_old = controlWord;
+	//controlWord &= 0xFF8F; // masking irrelevant bits
+	//controlWord |= 0x50; // set new point, target position is relative
+
+	//can_pdo_rx1(CAN_Ch, NODE_ID, targetPosition, modeOfOperation, controlWord);
+//	can_pdo_set_target_position(CAN_Ch, NODE_ID, targetPosition, controlWord);
+	
+	//can_set_target_position(CAN_Ch, NODE_ID, targetPosition, controlWord);
+	//can_query_status_word(CAN_Ch, NODE_ID);
 }
 
 void MotionSquat()
@@ -270,23 +352,23 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("PDO mapping...\n");
 	can_pdo_map(CAN_Ch, NODE_ID);
 
+	// set communication mode OPERATIONAL:
+	printf("set communication mode OPERATIONAL...\n");
+	can_nmt_node_start(CAN_Ch, NODE_ID);
+
 	// servo off(make it sure motor drives are in servo-off state):
 //	printf("servo off...\n");
 //	can_servo_off(CAN_Ch, NODE_ID, controlWord);
 
 	// set mode of operation:
-	printf("set mode of operation...\n");
-	can_set_mode_of_operation(CAN_Ch, NODE_ID, OP_MODE_PROFILED_POSITION);
-	printf("query mode of operation...\n");
-	can_query_mode_of_operation_display(CAN_Ch, NODE_ID);
+//	printf("set mode of operation...\n");
+//	can_set_mode_of_operation(CAN_Ch, NODE_ID, OP_MODE_PROFILED_POSITION);
+//	printf("query mode of operation...\n");
+//	can_query_mode_of_operation_display(CAN_Ch, NODE_ID);
 
 	// servo on:
-	printf("servo on...\n");
-	can_servo_on(CAN_Ch, NODE_ID, controlWord);
-
-	// set communication mode OPERATIONAL:
-	printf("set communication mode OPERATIONAL...\n");
-	can_nmt_node_start(CAN_Ch, NODE_ID);
+//	printf("servo on...\n");
+//	can_servo_on(CAN_Ch, NODE_ID, controlWord);
 
 	// start periodic communication:
 	printf("start periodic communication...\n");
@@ -309,8 +391,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	can_flush(CAN_Ch, NODE_ID);
 
 	// servo off:
-	printf("servo off...\n");
-	can_servo_off(CAN_Ch, NODE_ID, controlWord);
+//	printf("servo off...\n");
+//	can_servo_off(CAN_Ch, NODE_ID, controlWord);
 
 	// close CAN channel:
 	CloseCAN();

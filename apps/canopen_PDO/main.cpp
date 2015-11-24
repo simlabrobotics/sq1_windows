@@ -211,6 +211,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!OpenCAN())
 		return -1;
 
+	// reset device:
+	printf("reset node...");
+	can_nmt_soft_reset(CAN_Ch, NODE_ID);
+	Sleep(1000);
+	printf("done.\n");
+
 	// PDO mapping:
 	printf("PDO mapping...\n");
 	can_pdo_map(CAN_Ch, NODE_ID);

@@ -283,6 +283,11 @@ int _tmain(int argc, _TCHAR* argv[])
 		printf("query S/W version...\n");
 		can_query_sw_version(CAN_Ch, NODE_ID[node_index]);
 	
+		
+		// map PDO:
+		printf("PDO mapping...\n");
+		can_pdo_map(CAN_Ch, NODE_ID[node_index]);
+
 		// query PDO mapping:
 		printf("query RxPDO communication parameters...\n");
 		can_query_RxPDO_params(CAN_Ch, NODE_ID[node_index], 1);
