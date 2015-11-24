@@ -21,7 +21,7 @@
 const double delT = 0.005;
 int CAN_Ch = 0;
 const unsigned int NODE_COUNT = 3;
-unsigned char NODE_ID[NODE_COUNT] = {0x04, 0x05, 0x06};
+unsigned char NODE_ID[NODE_COUNT] = {0x07, 0x08, 0x09};
 bool ioThreadRun = false;
 uintptr_t ioThread = 0;
 int recvNum = 0;
@@ -323,6 +323,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		// query mode of operation:
 		printf("query mode of operation...\n");
 		can_query_mode_of_operation_display(CAN_Ch, NODE_ID[node_index]);
+
+		// query motion profile:
+		printf("query motion profile...\n");
+		can_dump_motion_profile(CAN_Ch, NODE_ID[node_index]);
 	}
 
 	// loop wait user input:

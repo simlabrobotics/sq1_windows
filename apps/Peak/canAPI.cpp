@@ -628,7 +628,7 @@ int can_sdo_upload(int ch, unsigned char node_id, unsigned short obj_index, unsi
 			}
 			else {
 				if (rx_data.s == 1) {
-					rx_len_to_be_uploaded = MAKELONG(MAKEWORD(rx_data[6], rx_data[7]), MAKEWORD(rx_data[4], rx_data[5]));
+					rx_len_to_be_uploaded = MAKELONG(MAKEWORD(rx_data[4], rx_data[5]), MAKEWORD(rx_data[6], rx_data[7]));
 				}
 				else {
 					rx_len_to_be_uploaded = -1;
@@ -1117,30 +1117,69 @@ int can_pdo_map(int ch, unsigned char node_id)
 	return 0;
 }
 
-int can_servo_on(int ch, unsigned char node_id, unsigned short control_word)
+int can_servo_on(int ch, unsigned char node_id, unsigned short& control_word)
 {
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
 	unsigned char entry_num = 0;
+	unsigned short control_word_old;
 
+	// to READY TO SWITCH ON:
+	printf("\tto READY TO SWITCH ON...\n");
+	control_word_old = control_word;
+	control_word &= 0xFF78; // masking irrelevant bits
+	control_word |= 0x06;
+	buf[0] = LOBYTE(control_word);
+	buf[1] = HIBYTE(control_word);
+	buf_len = 2;
+	err = can_sdo_download(ch, node_id, OD_CONTROLWORD, 0, buf, buf_len);
+	if (err) {
+		control_word = control_word_old;
+		return err;
+	}
+	Sleep(500);
+
+	// to SWITCHED ON:
+	printf("\tto SWITCHED ON...\n");
+	control_word_old = control_word;
+	control_word &= 0xFF70; // masking irrelevant bits
+	control_word |= 0x07;
+	buf[0] = LOBYTE(control_word);
+	buf[1] = HIBYTE(control_word);
+	buf_len = 2;
+	err = can_sdo_download(ch, node_id, OD_CONTROLWORD, 0, buf, buf_len);
+	if (err) {
+		control_word = control_word_old;
+		return err;
+	}
+	Sleep(500);
+
+	// to OPERATION ENABLED:
+	printf("\tto OPERATION ENABLED...\n");
+	control_word_old = control_word;
 	control_word &= 0xFF70; // masking irrelevant bits
 	control_word |= 0x0F;
 	buf[0] = LOBYTE(control_word);
 	buf[1] = HIBYTE(control_word);
 	buf_len = 2;
 	err = can_sdo_download(ch, node_id, OD_CONTROLWORD, 0, buf, buf_len);
-	if (err) return err;
+	if (err) {
+		control_word = control_word_old;
+		return err;
+	}
+	Sleep(500);
 
 	return 0;
 }
 
-int can_servo_off(int ch, unsigned char node_id, unsigned short control_word)
+int can_servo_off(int ch, unsigned char node_id, unsigned short& control_word)
 {
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
 	unsigned char entry_num = 0;
+	unsigned short control_word_old = control_word;
 
 	control_word &= 0xFF7D; // masking irrelevant bits
 	control_word |= 0x00;
@@ -1148,7 +1187,10 @@ int can_servo_off(int ch, unsigned char node_id, unsigned short control_word)
 	buf[1] = HIBYTE(control_word);
 	buf_len = 2;
 	err = can_sdo_download(ch, node_id, OD_CONTROLWORD, 0, buf, buf_len);
-	if (err) return err;
+	if (err) {
+		control_word = control_word_old;
+		return err;
+	}
 
 	return 0;
 }
@@ -1253,6 +1295,85 @@ int can_get_message(int ch,
 
 int can_dump_slave(int ch, unsigned char node_id)
 {
+	return 0;
+}
+
+int can_dump_motion_profile(int ch, unsigned char node_id)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	
+	err = can_sdo_upload(ch, node_id, OD_PROFILED_TARGET_POSITION, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tTarget position = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_POSITION_RANGE_LIMIT, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tMin position range limit = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_POSITION_RANGE_LIMIT, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tMax position range limit = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_SOFTWARE_POSITION_LIMIT, 1, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tSoftware min position range limit = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_SOFTWARE_POSITION_LIMIT, 2, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tSoftware max position range limit = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_MAX_PROFILE_VELOCITY, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tMax profile velocity = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_PROFILE_ACCELERATION, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tProfile acceleration = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_PROFILE_DECCELERATION, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tProfile deceleration = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_QUICKSTOP_DECCELERATION, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tQuick stop deceleration = %u\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_MOTION_PROFILE_TYPE, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tMotion profile type = %d\n", MAKEWORD(buf[0], buf[1]));
+	}
+#endif
+
 	return 0;
 }
 

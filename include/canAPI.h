@@ -47,8 +47,8 @@ int can_close(int ch);
 int can_nmt_node_start(int ch, unsigned char node_id); // go to operational state
 int can_nmt_node_stop(int ch, unsigned char node_id); // go to prepared(stopped) state
 int can_nmt_node_ready(int ch, unsigned char node_id); // enter pre-operational state
-int can_nmt_soft_reset(); // perform full software reset
-int can_nmt_hard_reset(); // It is recommended that you turn off the motor and kill any user program before executing.
+int can_nmt_soft_reset(int ch, unsigned char node_id); // perform full software reset
+int can_nmt_hard_reset(int ch, unsigned char node_id); // It is recommended that you turn off the motor and kill any user program before executing.
 
 // SYNC and Time Stamp:
 int can_sync(int ch);
@@ -93,8 +93,8 @@ int can_sys_init(int ch, unsigned char node_id, int period_msec);
 int can_pdo_map(int ch, unsigned char node_id);
 
 // device control:
-int can_servo_on(int ch, unsigned char node_id, unsigned short control_word);
-int can_servo_off(int ch, unsigned char node_id, unsigned short control_word);
+int can_servo_on(int ch, unsigned char node_id, unsigned short& control_word);
+int can_servo_off(int ch, unsigned char node_id, unsigned short& control_word);
 int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned char opmode);
 
 //
@@ -104,8 +104,10 @@ int can_restore_params(int ch, unsigned char node_id);
 
 // utilities:
 int can_dump_slave(int ch, unsigned char node_id);
+int can_dump_motion_profile(int ch, unsigned char node_id);
 int can_get_message(int ch, unsigned char& fn_code, unsigned char& node_id, unsigned char& len, unsigned char* data, bool blocking);
 int can_flush(int ch, unsigned char node_id);
+
 
 CANAPI_END
 

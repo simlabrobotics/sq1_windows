@@ -24,7 +24,7 @@ USING_NAMESPACE_SQ1
 // for CAN communication
 const double delT = 0.005;
 int CAN_Ch = 0;
-unsigned char NODE_ID = 0x06;
+unsigned char NODE_ID = 0x09;
 bool ioThreadRun = false;
 uintptr_t ioThread = 0;
 int recvNum = 0;
@@ -41,13 +41,6 @@ void CloseCAN();
 void StartCANListenThread();
 void StopCANListenThread();
 extern int getPCANChannelIndex(const char* cname);
-
-/////////////////////////////////////////////////////////////////////////////////////////
-// motion declarations
-void MotionStretch();
-void MotionSquat();
-void MotionWalkReady();
-void MotionWalk();
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // CAN communication thread
@@ -103,7 +96,7 @@ void MainLoop()
 			sync_counter++;
 			if (sync_counter == 100) {
 				can_sync(CAN_Ch);
-				sync_counter++;
+				sync_counter = 0;
 			}
 		}
 		else
@@ -117,10 +110,6 @@ void MainLoop()
 
 			case 's':
 				can_sync(CAN_Ch);
-				break;
-			
-			case '4':
-				MotionWalk();
 				break;
 			}
 		}
@@ -211,24 +200,6 @@ void PrintInstruction()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-// Demo motions:
-void MotionStretch()
-{
-}
-
-void MotionSquat()
-{
-}
-
-void MotionWalkReady()
-{
-}
-
-void MotionWalk()
-{
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
 // Program main
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -260,7 +231,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("stop periodic communication...\n");
 	StopCANListenThread();
 	
-	// set communication mode OPERATIONAL:
+	// set communication mode PREPARED:
 	printf("set communication mode STOPPED...\n");
 	can_nmt_node_stop(CAN_Ch, NODE_ID);
 
