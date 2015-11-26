@@ -1236,6 +1236,15 @@ int can_pdo_map(int ch, unsigned char node_id)
 	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
 	if (err) return err;
 
+	// map mode of operation as the next 1 byte of the PDO:
+	buf[0] = 8;
+	buf[1] = 0;
+	buf[2] = LOBYTE(OD_MODE_OF_OPERATION);
+	buf[3] = HIBYTE(OD_MODE_OF_OPERATION);
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
+	if (err) return err;
+
 	// map control word as the next 2 bytes of the PDO:
 	buf[0] = 16;
 	buf[1] = 0;
@@ -1246,13 +1255,13 @@ int can_pdo_map(int ch, unsigned char node_id)
 	if (err) return err;
 
 	// set transmission type in PDO communication parameters to "Transmit every SYNC":
-	/*buf[0] = 1;
+	buf[0] = 1;
 	buf[1] = 0x00;
 	buf[2] = 0x00;
 	buf[3] = 0x00;
 	buf_len = 1;
 	err = can_sdo_download(ch, node_id, OD_RxPDO1_COMM_PARAM, 2, buf, buf_len);
-	if (err) return err;*/
+	if (err) return err;
 
 	// activate the mapped objects:
 	buf[0] = entry_num;
@@ -1271,7 +1280,6 @@ int can_servo_on(int ch, unsigned char node_id, unsigned short& control_word)
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
-	unsigned char entry_num = 0;
 	unsigned short control_word_old;
 
 	// to READY TO SWITCH ON:
@@ -1327,7 +1335,6 @@ int can_servo_off(int ch, unsigned char node_id, unsigned short& control_word)
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
-	unsigned char entry_num = 0;
 	unsigned short control_word_old = control_word;
 
 	control_word &= 0xFF7D; // masking irrelevant bits
@@ -1349,11 +1356,99 @@ int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned char opmod
 	int err;
 	unsigned char buf[256];
 	unsigned short buf_len = 256;
-	unsigned char entry_num = 0;
 
 	buf[0] = opmode;
 	buf_len = 1;
 	err = can_sdo_download(ch, node_id, OD_MODE_OF_OPERATION, 0, buf, buf_len);
+	if (err) return err;
+
+	return 0;
+}
+
+int can_pdo_download(int ch, unsigned char node_id, unsigned char pdo_id, unsigned char* data, unsigned char len)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	int ret;
+	long tx_id = 
+		(pdo_id == 1 ? COB_ID(COBTYPE_RxPDO1, node_id) :
+		(pdo_id == 2 ? COB_ID(COBTYPE_RxPDO2, node_id) :
+		(pdo_id == 3 ? COB_ID(COBTYPE_RxPDO3, node_id) :
+		(pdo_id == 4 ? COB_ID(COBTYPE_RxPDO4, node_id) : 0))));
+	if (!tx_id) return -1;
+
+	ret = canSendMsg(ch, tx_id, len, data, true);
+	
+	return 0;
+}
+
+int can_pdo_set_target_position(int ch, unsigned char node_id, int target_position, unsigned short& control_word)
+{
+	int err;
+	unsigned char data[8];
+	unsigned char len = 8;
+	unsigned short control_word_old = control_word;
+	control_word &= 0xFF8F; // masking irrelevant bits
+	control_word |= 0x50; // set new point, target position is relative
+
+	data[0] = LOBYTE(LOWORD(target_position));
+	data[1] = HIBYTE(LOWORD(target_position));
+	data[2] = LOBYTE(HIWORD(target_position));
+	data[3] = HIBYTE(HIWORD(target_position));
+	data[4] = 0x01;
+	data[5] = LOBYTE(control_word);
+	data[6] = HIBYTE(control_word);
+	len = 7;
+	err = can_pdo_download(ch, node_id, 1, data, len);
+	control_word = control_word_old;
+	if (err) return err;
+
+	return 0;
+}
+
+int can_pdo_rx1(int ch, unsigned char node_id, int target_position, unsigned char mode_of_operation, unsigned short& control_word)
+{
+	int err;
+	unsigned char data[8];
+	unsigned char len = 8;
+
+	data[0] = LOBYTE(LOWORD(target_position));
+	data[1] = HIBYTE(LOWORD(target_position));
+	data[2] = LOBYTE(HIWORD(target_position));
+	data[3] = HIBYTE(HIWORD(target_position));
+	data[4] = mode_of_operation;
+	data[5] = LOBYTE(control_word);
+	data[6] = HIBYTE(control_word);
+	len = 7;
+	err = can_pdo_download(ch, node_id, 1, data, len);
+	if (err) return err;
+
+	return 0;
+}
+
+int can_set_target_position(int ch, unsigned char node_id, int target_position, unsigned short& control_word)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	unsigned short control_word_old;
+
+	buf[0] = LOBYTE(LOWORD(target_position));
+	buf[1] = HIBYTE(LOWORD(target_position));
+	buf[2] = LOBYTE(HIWORD(target_position));
+	buf[3] = HIBYTE(HIWORD(target_position));
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_PROFILED_TARGET_POSITION, 0, buf, buf_len);
+	if (err) return err;
+
+	control_word_old = control_word;
+	control_word &= 0xFF8F; // masking irrelevant bits
+	control_word |= 0x50; // set new point, target position is relative
+	buf[0] = LOBYTE(control_word);
+	buf[1] = HIBYTE(control_word);
+	buf_len = 2;
+	err = can_sdo_download(ch, node_id, OD_CONTROLWORD, 0, buf, buf_len);
+	control_word = control_word_old;
 	if (err) return err;
 
 	return 0;

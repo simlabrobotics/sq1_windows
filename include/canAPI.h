@@ -55,9 +55,6 @@ int can_sync(int ch);
 // Time Stamp:
 int can_timestamp(int ch);
 
-// PDO:
-
-
 // SDO:
 int can_sdo_download(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char* buf, unsigned short buf_len); // download data using an SDO
 int can_sdo_upload(int ch, unsigned char node_id, unsigned short obj_index, unsigned char sub_index, unsigned char* buf, unsigned short& buf_len); // upload data using an SDO
@@ -87,7 +84,6 @@ int can_bin_set_unit_mode(int ch, unsigned char node_id, unsigned char um);
 // OS interpreter:
 int can_os_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len);
 
-
 // LSS:
 int can_lss_switch_mode(int ch, unsigned char node_id, unsigned char mode);
 
@@ -100,7 +96,15 @@ int can_servo_on(int ch, unsigned char node_id, unsigned short& control_word);
 int can_servo_off(int ch, unsigned char node_id, unsigned short& control_word);
 int can_set_mode_of_operation(int ch, unsigned char node_id, unsigned char opmode);
 
+// PDO:
+int can_pdo_download(int ch, unsigned char node_id, unsigned char pdo_id, unsigned char* data, unsigned char len);
+
+// PDO tranmitions:
+int can_pdo_set_target_position(int ch, unsigned char node_id, int target_position, unsigned short& control_word);
+int can_pdo_rx1(int ch, unsigned char node_id, int target_position, unsigned char mode_of_operation, unsigned short& control_word);
+
 //
+int can_set_target_position(int ch, unsigned char node_id, int target_position, unsigned short& control_word);
 int can_write_PT(int ch, unsigned char node_id, unsigned short position);
 int can_store_params(int ch, unsigned char node_id);
 int can_restore_params(int ch, unsigned char node_id);
