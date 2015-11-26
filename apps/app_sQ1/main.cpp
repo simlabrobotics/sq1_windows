@@ -13,7 +13,7 @@
 #include <process.h>
 #include <tchar.h>
 #include <stdio.h>
-#include "canAPI.h"
+#include "canopenAPI.h"
 #include "sq1_def.h"
 #include "sq1_mem.h"
 #include "sq1_PDO.h"
@@ -23,15 +23,24 @@ USING_NAMESPACE_SQ1
 /////////////////////////////////////////////////////////////////////////////////////////
 // for CAN communication
 const double delT = 0.005;
-int CAN_Ch = 0;
-unsigned char NODE_ID = 0x09;
-bool ioThreadRun = false;
-uintptr_t ioThread = 0;
-int recvNum = 0;
-int sendNum = 0;
-double statTime = -1.0;
+const unsigned int CAN_Ch_COUNT = LEG_COUNT;
+const unsigned int NODE_COUNT = LEG_JDOF;
+int CAN_Ch[CAN_Ch_COUNT] = {0, 0, 0, 0};
+const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, false};
+const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
+	{false, false, false},
+	{false, false, false},
+	{false, false, true},
+	{false, false, false}
+};
+bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};
+uintptr_t ioThread[CAN_Ch_COUNT] = {0, 0, 0, 0};
+int recvNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
+int sendNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
+double statTime[CAN_Ch_COUNT] = {-1.0, -1.0, -1.0, -1.0};
 sQ1_RobotMemory_t vars;
 long targetPosition = 0;
+unsigned long targetVelocity = 0;
 unsigned char modeOfOperation = OP_MODE_PROFILED_POSITION;
 unsigned short controlWord = 0;
 unsigned short statusWord = 0;
@@ -42,9 +51,15 @@ void PrintInstruction();
 void MainLoop();
 bool OpenCAN();
 void CloseCAN();
+void DriveReset();
+void DriveInit();
+void DriveOff();
+void ProcessCANMessage(int index);
 void StartCANListenThread();
 void StopCANListenThread();
-extern int getPCANChannelIndex(const char* cname);
+#ifdef PeakCAN
+extern "C" int getPCANChannelIndex(const char* cname);
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // device control
@@ -54,7 +69,7 @@ void ReadyToSwitchOn();
 void SwitchedOn();
 void OperationEnable();
 void Shutdown();
-
+void StartHoming();
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // motion declarations
@@ -64,8 +79,8 @@ void MotionWalkReady();
 void MotionWalk();
 
 /////////////////////////////////////////////////////////////////////////////////////////
-// CAN communication thread
-static unsigned int __stdcall ioThreadProc(void* inst)
+// CAN message dispatcher
+void ProcessCANMessage(int index)
 {
 	unsigned char fn_code;
 	unsigned char node_id;
@@ -76,27 +91,36 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 	unsigned char data_return = 0;
 	//int i;
 
+	while (0 == can_get_message(CAN_Ch[index], fn_code, node_id, len, data, false))
+	{
+		switch (fn_code)
+		{
+		case COBTYPE_TxSDO:
+			{
+			}
+			break;
+
+		case COBTYPE_TxPDO1:
+		case COBTYPE_TxPDO2:
+		case COBTYPE_TxPDO3:
+		case COBTYPE_TxPDO4:
+			{
+				printf("\tTxPDO%d \n", (fn_code-COBTYPE_TxPDO1+1));
+			}
+			break;
+		}
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// CAN communication thread
+static unsigned int __stdcall ioThreadProc(void* inst)
+{
+	int can_index = (int)inst;
+
 	while (ioThreadRun)
 	{
-		while (0 == can_get_message(CAN_Ch, fn_code, node_id, len, data, false))
-		{
-			switch (fn_code)
-			{
-			case COBTYPE_TxSDO:
-				{
-				}
-				break;
-
-			case COBTYPE_TxPDO1:
-			case COBTYPE_TxPDO2:
-			case COBTYPE_TxPDO3:
-			case COBTYPE_TxPDO4:
-				{
-					printf("\tTxPDO%d \n", (fn_code-COBTYPE_TxPDO1+1));
-				}
-				break;
-			}
-		}
+		ProcessCANMessage(can_index);
 	}
 
 	return 0;
@@ -113,18 +137,36 @@ void MainLoop()
 	{
 		if (!_kbhit())
 		{
+			for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+			{
+				if (!CAN_Ch_Enabled[ch]) continue;
+				ProcessCANMessage(ch);
+			}
 			Sleep(5);
 			sync_counter++;
 			if (sync_counter == 400) {
 				
-				can_pdo_rx1(CAN_Ch, NODE_ID, targetPosition, modeOfOperation, controlWord);
+				for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+				{
+					if (!CAN_Ch_Enabled[ch]) continue;
+					for (int node = 0; node < NODE_COUNT; node++)
+					{
+						if (!NODE_Enabled[ch]) continue;
+						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][0], targetPosition, targetVelocity);
+						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][0], controlWord);
+					}
+
+				}
+				
 				controlWord &= 0xFF8F; // masking irrelevant bits
 				controlWord |= 0x00; // clear all operation mode specific bits
-				
-				//can_query_status_word(CAN_Ch, NODE_ID);
-				//can_query_mode_of_operation_display(CAN_Ch, NODE_ID);
 
-				can_sync(CAN_Ch);
+				for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+				{
+					if (!CAN_Ch_Enabled[ch]) continue;
+					can_sync(CAN_Ch[ch]);
+				}
+
 				sync_counter = 0;
 			}
 		}
@@ -138,7 +180,13 @@ void MainLoop()
 				break;
 
 			case 's':
-				can_sync(CAN_Ch);
+				{
+					for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+					{
+						if (!CAN_Ch_Enabled[ch]) continue;
+						can_sync(CAN_Ch[ch]);
+					}
+				}
 				break;
 			
 			case '1':
@@ -176,23 +224,36 @@ bool OpenCAN()
 	int ret;
 	
 #if defined(PeakCAN)
-	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS1");
-#elif defined(IXXATCAN)
-	CAN_Ch = 1;
-#elif defined(SOFTINGCAN)
-	CAN_Ch = 1;
+	CAN_Ch[0] = getPCANChannelIndex("PCAN_PCIBUS1");
+	CAN_Ch[1] = getPCANChannelIndex("PCAN_PCIBUS2");
+	CAN_Ch[2] = getPCANChannelIndex("PCAN_PCIBUS3");
+	CAN_Ch[3] = getPCANChannelIndex("PCAN_PCIBUS4");
+#elif defined(IXXATCAN) || defined(SOFTINGCAN)
+	CAN_Ch[0] = 1;
+	CAN_Ch[1] = 2;
+	CAN_Ch[2] = 3;
+	CAN_Ch[3] = 4;
 #elif defined(NICAN)
-	CAN_Ch = 0;
+	CAN_Ch[0] = 0;
+	CAN_Ch[1] = 1;
+	CAN_Ch[2] = 2;
+	CAN_Ch[3] = 3;
 #else
-	CAN_Ch = 1;
+	CAN_Ch[0] = 1;
+	CAN_Ch[1] = 2;
+	CAN_Ch[2] = 3;
+	CAN_Ch[3] = 4;
 #endif
 
-	printf(">CAN(%d): open\n", CAN_Ch);
-	ret = can_open(CAN_Ch);
-	if(ret < 0)
-	{
-		printf("ERROR command_canopen !!! \n");
-		return false;
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++) {
+		if (!CAN_Ch_Enabled[ch]) continue;
+		printf(">CAN(%d): open\n", CAN_Ch[ch]);
+		ret = can_open(CAN_Ch[ch]);
+		if(ret < 0)
+		{
+			printf("ERROR command_canopen !!! \n");
+			return false;
+		}
 	}
 
 	//StartCANListenThread();
@@ -208,33 +269,127 @@ void CloseCAN()
 
 	StopCANListenThread();
 
-	printf(">CAN(%d): close\n", CAN_Ch);
-	ret = can_close(CAN_Ch);
-	if(ret < 0) printf("ERROR command_can_close !!! \n");
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++) {
+		if (!CAN_Ch_Enabled[ch]) continue;
+		printf(">CAN(%d): close\n", CAN_Ch[ch]);
+		ret = can_close(CAN_Ch[ch]);
+		if(ret < 0) printf("ERROR command_can_close !!! \n");
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Reset motor drives
+void DriveReset()
+{
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch]) continue;
+			// reset device:
+			printf("reset node(%d, %d)...", CAN_Ch[ch], JointNodeID[ch][node]);
+			can_nmt_soft_reset(CAN_Ch[ch], JointNodeID[ch][node]);
+		}
+	}
+	Sleep(1000);
+	printf("done.\n");
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Init motor drives
+void DriveInit()
+{
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch]) continue;
+
+			// PDO mapping:
+			printf("PDO mapping...\n");
+			can_map_rxpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
+			can_map_rxpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
+			can_map_txpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
+			can_map_txpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
+
+			// set mode of operation:
+			printf("set mode of operation...\n");
+			can_set_mode_of_operation(CAN_Ch[ch], JointNodeID[ch][node], OP_MODE_PROFILED_POSITION);
+			printf("query mode of operation...\n");
+			can_query_mode_of_operation_display(CAN_Ch[ch], JointNodeID[ch][node]);
+			// set unit mode:
+			printf("set unit mode...\n");
+			can_bin_set_unit_mode(CAN_Ch[ch], JointNodeID[ch][node], UM_POSITION);
+
+			// set communication mode OPERATIONAL:
+			printf("set communication mode OPERATIONAL...\n");
+			can_nmt_node_start(CAN_Ch[ch], JointNodeID[ch][node]);
+		}
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Turn off motor drives
+void DriveOff()
+{
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch]) continue;
+
+			// set communication mode PREPARED:
+			printf("set communication mode STOPPED...\n");
+			can_nmt_node_stop(CAN_Ch[ch], JointNodeID[ch][node]);
+
+			// flush can messages:
+			printf("flush can messages...\n");
+			can_flush(CAN_Ch[ch], JointNodeID[ch][node]);
+
+			// servo off:
+			//printf("servo off...\n");
+			//can_servo_off(CAN_Ch, NODE_ID, controlWord);
+		}
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Start/Stop CAN message listener
 void StartCANListenThread()
 {
-	recvNum = 0;
-	sendNum = 0;
-	statTime = 0.0;
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
 
-	ioThreadRun = true;
-	ioThread = _beginthreadex(NULL, 0, ioThreadProc, NULL, 0, NULL);
-	printf(">CAN: starts listening CAN frames\n");
+		recvNum[ch] = 0;
+		sendNum[ch] = 0;
+		statTime[ch] = 0.0;
+
+		ioThreadRun[ch] = true;
+		ioThread[ch] = _beginthreadex(NULL, 0, ioThreadProc,(void*)(ch), 0, NULL);
+		printf(">CAN(%d): starts listening CAN frames\n", CAN_Ch[ch]);
+	}
 }
 
 void StopCANListenThread()
 {
-	if (ioThreadRun)
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
-		printf(">CAN: stoped listening CAN frames\n");
-		ioThreadRun = false;
-		WaitForSingleObject((HANDLE)ioThread, INFINITE);
-		CloseHandle((HANDLE)ioThread);
-		ioThread = 0;
+		if (!CAN_Ch_Enabled[ch]) continue;
+
+		if (ioThreadRun[ch])
+		{
+			printf(">CAN(%d): stoped listening CAN frames\n", CAN_Ch[ch]);
+			ioThreadRun[ch] = false;
+			WaitForSingleObject((HANDLE)ioThread[ch], INFINITE);
+			CloseHandle((HANDLE)ioThread[ch]);
+			ioThread[ch] = 0;
+		}
 	}
 }
 
@@ -269,7 +424,8 @@ void SetModeOfOperation()
 void SetTargetPosition()
 {
 	printf("set target position...\n");
-	targetPosition = 5000;
+	targetPosition = 10000;
+	targetVelocity = 100000;
 	controlWord &= 0xFF8F; // masking irrelevant bits
 	//controlWord |= 0x2070; // set new point, target position is relative
 	controlWord |= 0x0070; // set new point, target position is relative
@@ -304,22 +460,18 @@ void Shutdown()
 	controlWord = 0x00;
 }
 
+void StartHoming()
+{
+	printf("start homing...\n");
+	controlWord &= 0xFFEF; // masking irrelevant bits
+	controlWord |= 0x10;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Demo motions:
 void MotionStretch()
 {
-
-
-	//unsigned short control_word_old = controlWord;
-	//controlWord &= 0xFF8F; // masking irrelevant bits
-	//controlWord |= 0x50; // set new point, target position is relative
-
-	//can_pdo_rx1(CAN_Ch, NODE_ID, targetPosition, modeOfOperation, controlWord);
-//	can_pdo_set_target_position(CAN_Ch, NODE_ID, targetPosition, controlWord);
-	
-	//can_set_target_position(CAN_Ch, NODE_ID, targetPosition, controlWord);
-	//can_query_status_word(CAN_Ch, NODE_ID);
 }
 
 void MotionSquat()
@@ -346,63 +498,33 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!OpenCAN())
 		return -1;
 
-	// reset device:
-	/*printf("reset node...");
-	can_nmt_soft_reset(CAN_Ch, NODE_ID);
-	Sleep(1000);
-	printf("done.\n");*/
-
-	// PDO mapping:
-	printf("PDO mapping...\n");
-	can_pdo_map(CAN_Ch, NODE_ID);
-
-	// set mode of operation:
-//	printf("set mode of operation...\n");
-//	can_set_mode_of_operation(CAN_Ch, NODE_ID, OP_MODE_PROFILED_POSITION);
-//	printf("query mode of operation...\n");
-//	can_query_mode_of_operation_display(CAN_Ch, NODE_ID);
-
-	// set communication mode OPERATIONAL:
-	printf("set communication mode OPERATIONAL...\n");
-	can_nmt_node_start(CAN_Ch, NODE_ID);
-
-	// servo off(make it sure motor drives are in servo-off state):
-//	printf("servo off...\n");
-//	can_servo_off(CAN_Ch, NODE_ID, controlWord);
-
-	
-
-	// servo on:
-//	printf("servo on...\n");
-//	can_servo_on(CAN_Ch, NODE_ID, controlWord);
+	DriveReset();
+	DriveInit();
 
 	// start periodic communication:
-	printf("start periodic communication...\n");
-	StartCANListenThread();
+//	printf("start periodic communication...\n");
+//	StartCANListenThread();
 
-	// set unit mode:
-	printf("set unit mode...\n");
-	can_bin_set_unit_mode(CAN_Ch, NODE_ID, UM_POSITION);
+	/*SetModeOfOperation();
+	Sleep(50);
+	ReadyToSwitchOn();
+	Sleep(50);
+	SwitchedOn();
+	Sleep(50);
+	OperationEnable();
+	Sleep(50);*/
+	/*Shutdown();
+	Sleep(50);*/
 
 	// loop wait user input:
 	printf("main loop...\n");
 	MainLoop();
 
 	// stop periodic communication:
-	printf("stop periodic communication...\n");
-	StopCANListenThread();
+//	printf("stop periodic communication...\n");
+//	StopCANListenThread();
 	
-	// set communication mode PREPARED:
-	printf("set communication mode STOPPED...\n");
-	can_nmt_node_stop(CAN_Ch, NODE_ID);
-
-	// flush can messages:
-	printf("flush can messages...\n");
-	can_flush(CAN_Ch, NODE_ID);
-
-	// servo off:
-//	printf("servo off...\n");
-//	can_servo_off(CAN_Ch, NODE_ID, controlWord);
+	DriveOff();
 
 	// close CAN channel:
 	CloseCAN();

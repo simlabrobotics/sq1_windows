@@ -13,15 +13,13 @@
 #include <process.h>
 #include <tchar.h>
 #include <stdio.h>
-#include "canAPI.h"
+#include "canopenAPI.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // for CAN communication
 const double delT = 0.005;
 int CAN_Ch = 0;
 unsigned char NODE_ID = 0x01;
-bool ioThreadRun = false;
-uintptr_t ioThread = 0;
 int recvNum = 0;
 int sendNum = 0;
 double statTime = -1.0;
@@ -32,13 +30,14 @@ void PrintInstruction();
 void MainLoop();
 bool OpenCAN();
 void CloseCAN();
-void StartCANListenThread();
-void StopCANListenThread();
-extern int getPCANChannelIndex(const char* cname);
+void ProcessCANMessage();
+#ifdef PeakCAN
+extern "C" int getPCANChannelIndex(const char* cname);
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////
-// CAN communication thread
-static unsigned int __stdcall ioThreadProc(void* inst)
+// CAN message dispatcher
+void ProcessCANMessage()
 {
 	unsigned char fn_code;
 	unsigned char node_id;
@@ -49,15 +48,10 @@ static unsigned int __stdcall ioThreadProc(void* inst)
 	unsigned char data_return = 0;
 	//int i;
 
-	while (ioThreadRun)
+	while (0 == can_get_message(CAN_Ch, fn_code, node_id, len, data, false))
 	{
-		while (0 == can_get_message(CAN_Ch, fn_code, node_id, len, data, false))
-		{
 			
-		}
 	}
-
-	return 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +64,7 @@ void MainLoop()
 	{
 		if (!_kbhit())
 		{
+			ProcessCANMessage();
 			Sleep(5);
 		}
 		else
@@ -111,8 +106,6 @@ bool OpenCAN()
 		return false;
 	}
 
-	//StartCANListenThread();
-
 	return true;
 }
 
@@ -122,36 +115,9 @@ void CloseCAN()
 {
 	int ret;
 
-	StopCANListenThread();
-
 	printf(">CAN(%d): close\n", CAN_Ch);
 	ret = can_close(CAN_Ch);
 	if(ret < 0) printf("ERROR command_can_close !!! \n");
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-// Start/Stop CAN message listener
-void StartCANListenThread()
-{
-	recvNum = 0;
-	sendNum = 0;
-	statTime = 0.0;
-
-	ioThreadRun = true;
-	ioThread = _beginthreadex(NULL, 0, ioThreadProc, NULL, 0, NULL);
-	printf(">CAN: starts listening CAN frames\n");
-}
-
-void StopCANListenThread()
-{
-	if (ioThreadRun)
-	{
-		printf(">CAN: stopped listening CAN frames\n");
-		ioThreadRun = false;
-		WaitForSingleObject((HANDLE)ioThread, INFINITE);
-		CloseHandle((HANDLE)ioThread);
-		ioThread = 0;
-	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

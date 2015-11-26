@@ -39,6 +39,61 @@ const unsigned char JointNodeID[LEG_COUNT][LEG_JDOF] = {
 	{0x0A, 0x0B, 0x0C}
 };
 
+class sQ1Leg;
+class sQ1Joint;
+class sQ1;
+
+class sQ1Joint
+{
+	int _leg_index;
+	int _joint_index;
+	bool _enabled;
+public:
+	sQ1Joint() : _leg_index(-1), _joint_index(-1), _enabled(true) {}
+	unsigned char node_id() { return JointNodeID[_leg_index][_joint_index]; }
+	int index() { return _joint_index; }
+	void index(int lidx, int jidx) { _leg_index = lidx; _joint_index = jidx; }
+	bool enabled() { return _enabled; }
+	void enabled(bool b) { _enabled = b; }
+	void init() {
+	}
+};
+
+class sQ1Leg
+{
+	sQ1Joint _joint[LEG_JDOF];
+	int _index;
+	bool _enabled;
+public:
+	sQ1Leg() : _index(-1), _enabled(true) {}
+	sQ1Joint& joint(int index) { return _joint[index]; }
+	const sQ1Joint& joint(int index) const { return _joint[index]; }
+	int index() { return _index; }
+	void index(int idx) { _index = idx; }
+	bool enabled() { return _enabled; }
+	void enabled(bool b) { _enabled = b; }
+	void init() {
+		for (int i=0; i<LEG_JDOF; i++) {
+			_joint[i].index(_index, i);
+			_joint[i].init();
+		}
+	}
+};
+
+class sQ1
+{
+	sQ1Leg _leg[LEG_COUNT];
+public:
+	sQ1Leg& leg(int index) { return _leg[index]; }
+	const sQ1Leg& leg(int index) const { return _leg[index]; }
+	void init() {
+		for (int i=0; i<LEG_COUNT; i++) {
+			_leg[i].index(i);
+			_leg[i].init();
+		}
+	}
+};
+
 NAMESPACE_SQ1_END
 
 #endif // __SQ1_DEF_H__

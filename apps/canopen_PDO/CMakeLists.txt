@@ -37,6 +37,8 @@ macro(add_CAN_srcs CAN_name)
 		"${CMAKE_SOURCE_DIR}/include/${CAN_name}/*.h"
 		"${CMAKE_SOURCE_DIR}/include/${CAN_name}/*.hpp"
 		"${CMAKE_SOURCE_DIR}/include/${CAN_name}/*.rc"
+		"${SQ1_APPS_DIR}/can*.cpp"
+		"${SQ1_APPS_DIR}/can*.c"
 		)
 
 	LIST(APPEND ${name}_EXTRA_SRCS_NAME
@@ -53,6 +55,8 @@ macro(add_CAN_srcs CAN_name)
 		"${CAN_name} CAN header"
 		"${CAN_name} CAN header"
 		"${CAN_name} CAN resource"
+		"${CAN_name} CAN source"
+		"${CAN_name} CAN source"
 		)
 		
 	add_definitions( -D${CAN_name}CAN	)
