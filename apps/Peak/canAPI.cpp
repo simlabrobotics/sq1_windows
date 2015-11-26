@@ -1034,6 +1034,29 @@ int can_query_mode_of_operation_display(int ch, unsigned char node_id)
 	return err;
 }
 
+int can_query_drive_modes(int ch, unsigned char node_id)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	
+	err = can_sdo_upload(ch, node_id, OD_DRIVE_MODES, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tsupported drive modes = ");
+		printBinary(buf[3]);
+		printf(" ");
+		printBinary(buf[2]);
+		printf(" ");
+		printBinary(buf[1]);
+		printf(" ");
+		printBinary(buf[0]);
+		printf("b\n");
+	}
+#endif
+	return err;
+}
+
 int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len)
 {
 	return 0;

@@ -32,7 +32,7 @@ int sendNum = 0;
 double statTime = -1.0;
 sQ1_RobotMemory_t vars;
 long targetPosition = 0;
-unsigned char modeOfOperation = OP_MODE_NO_MODE;
+unsigned char modeOfOperation = OP_MODE_PROFILED_POSITION;
 unsigned short controlWord = 0;
 unsigned short statusWord = 0;
 
@@ -121,6 +121,9 @@ void MainLoop()
 				controlWord &= 0xFF8F; // masking irrelevant bits
 				controlWord |= 0x00; // clear all operation mode specific bits
 				
+				//can_query_status_word(CAN_Ch, NODE_ID);
+				//can_query_mode_of_operation_display(CAN_Ch, NODE_ID);
+
 				can_sync(CAN_Ch);
 				sync_counter = 0;
 			}
@@ -268,7 +271,8 @@ void SetTargetPosition()
 	printf("set target position...\n");
 	targetPosition = 0;
 	controlWord &= 0xFF8F; // masking irrelevant bits
-	controlWord |= 0x2070; // set new point, target position is relative
+	//controlWord |= 0x2070; // set new point, target position is relative
+	controlWord |= 0x0070; // set new point, target position is relative
 }
 
 void ReadyToSwitchOn()
@@ -343,14 +347,20 @@ int _tmain(int argc, _TCHAR* argv[])
 		return -1;
 
 	// reset device:
-	printf("reset node...");
+	/*printf("reset node...");
 	can_nmt_soft_reset(CAN_Ch, NODE_ID);
 	Sleep(1000);
-	printf("done.\n");
+	printf("done.\n");*/
 
 	// PDO mapping:
 	printf("PDO mapping...\n");
 	can_pdo_map(CAN_Ch, NODE_ID);
+
+	// set mode of operation:
+	printf("set mode of operation...\n");
+	can_set_mode_of_operation(CAN_Ch, NODE_ID, OP_MODE_PROFILED_POSITION);
+	printf("query mode of operation...\n");
+	can_query_mode_of_operation_display(CAN_Ch, NODE_ID);
 
 	// set communication mode OPERATIONAL:
 	printf("set communication mode OPERATIONAL...\n");
@@ -360,11 +370,7 @@ int _tmain(int argc, _TCHAR* argv[])
 //	printf("servo off...\n");
 //	can_servo_off(CAN_Ch, NODE_ID, controlWord);
 
-	// set mode of operation:
-//	printf("set mode of operation...\n");
-//	can_set_mode_of_operation(CAN_Ch, NODE_ID, OP_MODE_PROFILED_POSITION);
-//	printf("query mode of operation...\n");
-//	can_query_mode_of_operation_display(CAN_Ch, NODE_ID);
+	
 
 	// servo on:
 //	printf("servo on...\n");

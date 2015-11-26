@@ -283,6 +283,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		printf("query S/W version...\n");
 		can_query_sw_version(CAN_Ch, NODE_ID[node_index]);
 	
+		// query supported drive modes:
+		printf("query supported drive modes...\n");
+		can_query_drive_modes(CAN_Ch, NODE_ID[node_index]);
 		
 		// map PDO:
 		printf("PDO mapping...\n");
