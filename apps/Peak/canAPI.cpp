@@ -751,6 +751,62 @@ int can_query_node_id(int ch, unsigned char node_id)
 	return err;
 }
 
+int can_query_status_register(int ch, unsigned char node_id)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	unsigned char status;
+	
+	err = can_sdo_upload(ch, node_id, OD_STATUS_REGISTER, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tdrive condition = %s\n", (buf[0] & 0x01) ? "OK" : "Problem");
+
+		status = (buf[0] & 0x0E) >> 1;
+		printf("\tdrive status indication = ");
+		switch (status) {
+		case 0x00: printf("OK"); break;
+		case 0x01: printf("Under voltage"); break;
+		case 0x02: printf("Over voltage"); break;
+		case 0x05: printf("Short circuit"); break;
+		case 0x06: printf("Temperature warning(Overheating)"); break;
+		}
+		printf("\n");
+		
+		printf("\tmotor on(MO) = %s\n", (buf[0] & 0x10) ? "On" : "Off");
+		printf("\treference mode(RM) = %s\n", (buf[0] & 0x20) ? "internal sw reference command and auxiliary reference command" : "interpreter command or the user program");
+		
+		status = ((buf[0] & 0x80) >> 7) | ((buf[1] & 0x03) << 1);
+		printf("\tunit mode = ");
+		switch (status) {
+		case UM_TORQUE: printf("Torque"); break;
+		case UM_SPEED: printf("Speed"); break;
+		case UM_MICRO_STEPPER: printf("Micro stepper"); break;
+		case UM_POSITION_DUAL_FEEDBACK: printf("Position with dual feedback"); break;
+		case UM_POSITION: printf("Position"); break;
+		default: printf("Un-known(%Xh)", status); break;
+		}
+		printf("\n");
+
+		printf("\tgain scheduling = %s\n", (buf[1] & 0x04) ? "On" : "Off");
+		printf("\thoming is in progress = %s\n", (buf[1] & 0x08) ? "Yes" : "No");
+		printf("\tprogram running = %s\n", (buf[1] & 0x10) ? "Yes" : "No");
+		printf("\tcurrent limit(LC) = %s\n", (buf[1] & 0x20) ? "On" : "Off");
+		printf("\tmotion status reflection(MS) = %d\n", (buf[1] & 0xC0) >> 6);
+		printf("\trecorder status = %d\n", (buf[2] & 0x03));
+
+		printf("\tdigital hall sensor A = %d\n", (buf[3] & 0x01) >> 0);
+		printf("\tdigital hall sensor B = %d\n", (buf[3] & 0x02) >> 1);
+		printf("\tdigital hall sensor C = %d\n", (buf[3] & 0x04) >> 2);
+		printf("\tCPU status = %s\n", (buf[3] & 0x08) ? "Stack overflow or CPU exception" : "OK");
+		printf("\tstopped by a limit = %d\n", (buf[3] & 0x10) >> 4);
+		printf("\terror in user program = %d\n", (buf[3] & 0x20) >> 5);
+	}
+#endif
+	return err;
+}
+
 int can_query_RxPDO_params(int ch, unsigned char node_id, unsigned char pdo_id)
 {
 	int err;
@@ -1036,7 +1092,49 @@ int can_query_mode_of_operation_display(int ch, unsigned char node_id)
 
 int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len)
 {
+	assert(ch >= 0 && ch < MAX_BUS);
+	assert(buf && buf_len > 0);
+
+	unsigned long tx_id;
+	int err;
+	tx_id = COB_ID(COBTYPE_RxPDO2 , node_id);
+
+	return canSendMsg(ch, tx_id, (unsigned char)buf_len, buf, true);
+	if (err) return err;
+
 	return 0;
+}
+
+int can_bin_query_unit_mode(int ch, unsigned char node_id)
+{
+	unsigned char data[8];
+
+	data[0] = 'U';
+	data[1] = 'M';
+	data[2] = 0x00;
+	data[3] = 0x40; // query, interger
+	data[4] = 0x00;
+	data[5] = 0x00;
+	data[6] = 0x00;
+	data[7] = 0x00;
+
+	return can_bin_interprete(ch, node_id, data, 8);
+}
+
+int can_bin_set_unit_mode(int ch, unsigned char node_id, unsigned char um)
+{
+	unsigned char data[8];
+
+	data[0] = 'U';
+	data[1] = 'M';
+	data[2] = 0x00;
+	data[3] = 0x00; // set, integer
+	data[4] = um;
+	data[5] = 0x00;
+	data[6] = 0x00;
+	data[7] = 0x00;
+
+	return can_bin_interprete(ch, node_id, data, 8);
 }
 
 int can_os_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len)

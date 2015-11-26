@@ -68,6 +68,7 @@ int can_query_device_name(int ch, unsigned char node_id);
 int can_query_sw_version(int ch, unsigned char node_id);
 int can_query_hw_version(int ch, unsigned char node_id);
 int can_query_node_id(int ch, unsigned char node_id);
+int can_query_status_register(int ch, unsigned char node_id);
 int can_query_RxPDO_params(int ch, unsigned char node_id, unsigned char pdo_id);
 int can_query_RxPDO_mapping(int ch, unsigned char node_id, unsigned char pdo_id);
 int can_query_TxPDO_params(int ch, unsigned char node_id, unsigned char pdo_id);
@@ -80,6 +81,8 @@ int can_query_mode_of_operation_display(int ch, unsigned char node_id);
 
 // Binary interpreter:
 int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len);
+int can_bin_query_unit_mode(int ch, unsigned char node_id);
+int can_bin_set_unit_mode(int ch, unsigned char node_id, unsigned char um);
 
 // OS interpreter:
 int can_os_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len);
