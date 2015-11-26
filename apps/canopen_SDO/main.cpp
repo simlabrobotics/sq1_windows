@@ -286,7 +286,15 @@ int _tmain(int argc, _TCHAR* argv[])
 		// query supported drive modes:
 		printf("query supported drive modes...\n");
 		can_query_drive_modes(CAN_Ch, NODE_ID[node_index]);
-		
+	
+		// set unit mode
+		printf("set unit mode...\n");
+		can_bin_set_unit_mode(CAN_Ch, NODE_ID[node_index], UM_POSITION);
+
+		// query status register:
+		printf("query status register...\n");
+		can_query_status_register(CAN_Ch, NODE_ID[node_index]);
+
 		// map PDO:
 		printf("PDO mapping...\n");
 		can_pdo_map(CAN_Ch, NODE_ID[node_index]);

@@ -761,7 +761,7 @@ int can_query_status_register(int ch, unsigned char node_id)
 	err = can_sdo_upload(ch, node_id, OD_STATUS_REGISTER, 0, buf, buf_len);
 #ifdef CAN_PRINT_SDO_RESPONSE
 	if (!err) {
-		printf("\tdrive condition = %s\n", (buf[0] & 0x01) ? "OK" : "Problem");
+		printf("\tdrive condition = %s\n", (buf[0] & 0x01) ? "Problem" : "OK");
 
 		status = (buf[0] & 0x0E) >> 1;
 		printf("\tdrive status indication = ");

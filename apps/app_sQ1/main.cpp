@@ -269,7 +269,7 @@ void SetModeOfOperation()
 void SetTargetPosition()
 {
 	printf("set target position...\n");
-	targetPosition = 0;
+	targetPosition = 5000;
 	controlWord &= 0xFF8F; // masking irrelevant bits
 	//controlWord |= 0x2070; // set new point, target position is relative
 	controlWord |= 0x0070; // set new point, target position is relative
@@ -357,10 +357,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	can_pdo_map(CAN_Ch, NODE_ID);
 
 	// set mode of operation:
-	printf("set mode of operation...\n");
-	can_set_mode_of_operation(CAN_Ch, NODE_ID, OP_MODE_PROFILED_POSITION);
-	printf("query mode of operation...\n");
-	can_query_mode_of_operation_display(CAN_Ch, NODE_ID);
+//	printf("set mode of operation...\n");
+//	can_set_mode_of_operation(CAN_Ch, NODE_ID, OP_MODE_PROFILED_POSITION);
+//	printf("query mode of operation...\n");
+//	can_query_mode_of_operation_display(CAN_Ch, NODE_ID);
 
 	// set communication mode OPERATIONAL:
 	printf("set communication mode OPERATIONAL...\n");
@@ -379,6 +379,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	// start periodic communication:
 	printf("start periodic communication...\n");
 	StartCANListenThread();
+
+	// set unit mode:
+	printf("set unit mode...\n");
+	can_bin_set_unit_mode(CAN_Ch, NODE_ID, UM_POSITION);
 
 	// loop wait user input:
 	printf("main loop...\n");
