@@ -130,11 +130,11 @@ void ProcessCANMessage(int index)
 				printf("\tTxPDO3[node=%d]: ", node_id);
 				printf("position = %d", MAKELONG(MAKEWORD(data[0], data[1]), MAKEWORD(data[2], data[3])));
 				printf(", DI = ");
-				printBinary(data[7]);
-				printf(" ");
 				printBinary(data[6]);
 				printf(" ");
 				printBinary(data[5]);
+				printf(" ");
+				printBinary(data[4]);
 				/*printf(" ");
 				printBinary(data[4]);*/
 				printf("b\n");
@@ -196,8 +196,8 @@ void MainLoop()
 
 				}
 				
-				controlWord &= 0xFF8F; // masking irrelevant bits
-				controlWord |= 0x00; // clear all operation mode specific bits
+//				controlWord &= 0xFF8F; // masking irrelevant bits
+//				controlWord |= 0x00; // clear all operation mode specific bits
 
 				for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 				{
@@ -354,7 +354,7 @@ void DriveInit()
 			can_map_txpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set homing parameters:
-			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], 0, 2, 40960, 4096, 4096000);
+			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], 0, 3, 40960*2, 4096*2, 60000000);
 			can_dump_homing_params(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set mode of operation:
