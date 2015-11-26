@@ -64,11 +64,23 @@ void ProcessCANMessage()
 			break;
 
 		case COBTYPE_TxPDO1:
+			{
+				printf("\tTxPDO1 \n");
+			}
+			break;
 		case COBTYPE_TxPDO2:
+			{
+				printf("\tTxPDO2 \n");
+			}
+			break;
 		case COBTYPE_TxPDO3:
+			{
+				printf("\tTxPDO3 \n");
+			}
+			break;
 		case COBTYPE_TxPDO4:
 			{
-				printf("\tTxPDO%d \n", (fn_code-COBTYPE_TxPDO1+1));
+				printf("\tTxPDO4 \n");
 			}
 			break;
 		}
@@ -118,7 +130,7 @@ bool OpenCAN()
 	int ret;
 	
 #if defined(PeakCAN)
-	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS1");
+	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS3");
 #elif defined(IXXATCAN)
 	CAN_Ch = 1;
 #elif defined(SOFTINGCAN)

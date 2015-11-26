@@ -173,7 +173,7 @@ bool OpenCAN()
 	int ret;
 	
 #if defined(PeakCAN)
-	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS1");
+	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS3");
 #elif defined(IXXATCAN)
 	CAN_Ch = 1;
 #elif defined(SOFTINGCAN)

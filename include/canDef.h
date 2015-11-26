@@ -12,7 +12,7 @@
 
 #ifdef __cplusplus
 #	define CANAPI_EXTERN_C_BEGIN	extern "C" {
-#	define CANAPI_EXTERN_C_END		}
+#	define CANAPI_EXTERN_C_END		};
 #else
 #	define CANAPI_EXTERN_C_BEGIN
 #	define CANAPI_EXTERN_C_END

@@ -229,7 +229,8 @@ int canReadMsg(int bus, unsigned long& id, unsigned char& len, unsigned char *da
 				data[i] = CANMsg.DATA[i];
 
 #ifdef CAN_PRINT_Rx_MESSAGE
-		printf("    Rx %04xh (fn=%s(%d), node=%d, len=%d)", id, COBTYPE_NAME(COB_FN_CODE(id)), COB_FN_CODE(id), COB_NODE_ID(id), len);
+		//printf("    Rx %04xh (fn=%s(%d), node=%d, len=%d)", id, COBTYPE_NAME(COB_FN_CODE(id)), COB_FN_CODE(id), COB_NODE_ID(id), len);
+		printf("    Rx %04xh (len=%d)", id, len);
 		for(int nd=0; nd<len; nd++) printf(" %02X ", data[nd]);
 		printf("\n");
 #endif
@@ -254,7 +255,8 @@ int canSendMsg(int bus, unsigned long id, unsigned char len, unsigned char *data
 	CANMsg.MSGTYPE = PCAN_MESSAGE_STANDARD;
 
 #ifdef CAN_PRINT_Tx_MESSAGE
-	printf("    Tx %04xh (fn=%s(%d), node=%d, len=%d)", id, COBTYPE_NAME(COB_FN_CODE(id)), COB_FN_CODE(id), COB_NODE_ID(id), len);
+	//printf("    Tx %04xh (fn=%s(%d), node=%d, len=%d)", id, COBTYPE_NAME(COB_FN_CODE(id)), COB_FN_CODE(id), COB_NODE_ID(id), len);
+	printf("    Tx %04xh (len=%d)", id, len);
 	for(int nd=0; nd<len; nd++) printf(" %02X ", data[nd]);
 	printf("\n");
 #endif

@@ -130,7 +130,13 @@ void ProcessCANMessage(int index)
 				printf("\tTxPDO3[node=%d]: ", node_id);
 				printf("position = %d", MAKELONG(MAKEWORD(data[0], data[1]), MAKEWORD(data[2], data[3])));
 				printf(", DI = ");
+				printBinary(data[7]);
+				printf(" ");
 				printBinary(data[6]);
+				printf(" ");
+				printBinary(data[5]);
+				/*printf(" ");
+				printBinary(data[4]);*/
 				printf("b\n");
 			}
 			break;
@@ -184,7 +190,7 @@ void MainLoop()
 					for (int node = 0; node < NODE_COUNT; node++)
 					{
 						if (!NODE_Enabled[ch][node]) continue;
-						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], targetPosition, targetVelocity);
+//						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], targetPosition, targetVelocity);
 						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], controlWord, modeOfOperation);
 					}
 
@@ -238,7 +244,7 @@ void MainLoop()
 				break;
 
 			case '5':
-				SetTargetPosition();
+				StartHoming();
 				break;
 
 			case '6':
@@ -343,9 +349,13 @@ void DriveInit()
 			// PDO mapping:
 			printf("PDO mapping...\n");
 			can_map_rxpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
-			can_map_rxpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
+//			can_map_rxpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
 			can_map_txpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
 			can_map_txpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
+
+			// set homing parameters:
+			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], 0, 2, 40960, 4096, 4096000);
+			can_dump_homing_params(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set mode of operation:
 //			printf("set mode of operation...\n");
@@ -451,7 +461,7 @@ void PrintInstruction()
 void SetModeOfOperation()
 {
 	printf("set mode of operation...\n");
-	modeOfOperation = OP_MODE_PROFILED_POSITION;
+	modeOfOperation = OP_MODE_HOMING;
 }
 
 void SetTargetPosition()

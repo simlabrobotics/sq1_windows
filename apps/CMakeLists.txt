@@ -22,6 +22,7 @@ if( BUILD_CAN_SAMPLES )
 	add_subdirectory( canopen_PDO )
 	add_subdirectory( canopen_SDO )
 	add_subdirectory( canopen_enum_devices )
+	add_subdirectory( canopen_homing )
 endif()
 
 if( BUILD_APPS ) 

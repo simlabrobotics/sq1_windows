@@ -94,10 +94,11 @@ int can_pdo_download(int ch, unsigned char node_id, unsigned char pdo_id, unsign
 
 // PDO tranmitions:
 int can_pdo_set_target_position(int ch, unsigned char node_id, int target_position, unsigned short& control_word);
-int can_pdo_rx1(int ch, unsigned char node_id, unsigned short& control_word);
+int can_pdo_rx1(int ch, unsigned char node_id, unsigned short& control_word, unsigned char mode_of_operation);
 int can_pdo_rx3(int ch, unsigned char node_id, int target_position, unsigned int profile_velocity);
 
 //
+int can_set_homing_params(int ch, unsigned char node_id, long offset, char method, unsigned long speed1, unsigned long speed2, unsigned long acceleration);
 int can_set_target_position(int ch, unsigned char node_id, int target_position, unsigned short& control_word);
 int can_write_PT(int ch, unsigned char node_id, unsigned short position);
 int can_store_params(int ch, unsigned char node_id);

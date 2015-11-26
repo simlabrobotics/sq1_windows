@@ -843,6 +843,20 @@ int can_query_drive_modes(int ch, unsigned char node_id)
 
 int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len)
 {
+	/*assert(ch >= 0 && ch < MAX_BUS);
+	assert(buf && buf_len > 0);
+
+	int err;
+	
+	err = can_sdo_upload(ch, node_id, OD_BIN_INTERPRETER_OUTPUT, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tbinary interpreter = \n");
+	}
+#endif
+	return err;*/
+
+
 	assert(ch >= 0 && ch < MAX_BUS);
 	assert(buf && buf_len > 0);
 
@@ -1029,16 +1043,25 @@ int can_map_rxpdo1(int ch, unsigned char node_id)
 	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, 0, buf, buf_len);
 	if (err) return err;
 
-	//// map mode of operation as the next 1 byte of the PDO:
-	//buf[0] = 8;
-	//buf[1] = 0;
-	//buf[2] = LOBYTE(OD_MODE_OF_OPERATION);
-	//buf[3] = HIBYTE(OD_MODE_OF_OPERATION);
-	//buf_len = 4;
-	//err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
-	//if (err) return err;
+	// map profile target position as the 1st 4 bytes of the PDO:
+	buf[0] = 32;
+	buf[1] = 0;
+	buf[2] = LOBYTE(OD_PROFILED_TARGET_POSITION);
+	buf[3] = HIBYTE(OD_PROFILED_TARGET_POSITION);
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
+	if (err) return err;
 
-	// map control word as the 1st 2 bytes of the PDO:
+	// map mode of operation as the next 1 byte of the PDO:
+	buf[0] = 8;
+	buf[1] = 0;
+	buf[2] = LOBYTE(OD_MODE_OF_OPERATION);
+	buf[3] = HIBYTE(OD_MODE_OF_OPERATION);
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
+	if (err) return err;
+
+	// map control word as the next 2 bytes of the PDO:
 	buf[0] = 16;
 	buf[1] = 0;
 	buf[2] = LOBYTE(OD_CONTROLWORD);
@@ -1113,7 +1136,7 @@ int can_map_rxpdo3(int ch, unsigned char node_id)
 	buf[2] = 0x00;
 	buf[3] = 0x00;
 	buf_len = 1;
-	err = can_sdo_download(ch, node_id, OD_RxPDO1_COMM_PARAM, 2, buf, buf_len);
+	err = can_sdo_download(ch, node_id, OD_RxPDO3_COMM_PARAM, 2, buf, buf_len);
 	if (err) return err;
 
 	// activate the mapped objects:
@@ -1122,7 +1145,7 @@ int can_map_rxpdo3(int ch, unsigned char node_id)
 	buf[2] = 0x00;
 	buf[3] = 0x00;
 	buf_len = 1;
-	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, 0, buf, buf_len);
+	err = can_sdo_download(ch, node_id, OD_RxPDO3_MAPPING, 0, buf, buf_len);
 	if (err) return err;
 
 	return 0;
@@ -1264,15 +1287,20 @@ int can_pdo_set_target_position(int ch, unsigned char node_id, int target_positi
 	return 0;
 }
 
-int can_pdo_rx1(int ch, unsigned char node_id, unsigned short& control_word)
+int can_pdo_rx1(int ch, unsigned char node_id, unsigned short& control_word,unsigned char mode_of_operation)
 {
 	int err;
 	unsigned char data[8];
 	unsigned char len = 8;
 
-	data[0] = LOBYTE(control_word);
-	data[1] = HIBYTE(control_word);
-	len = 2;
+	data[0] = LOBYTE(LOWORD(10000));
+	data[1] = HIBYTE(LOWORD(10000));
+	data[2] = LOBYTE(HIWORD(10000));
+	data[3] = HIBYTE(HIWORD(10000));
+	data[4] = mode_of_operation;
+	data[5] = LOBYTE(control_word);
+	data[6] = HIBYTE(control_word);
+	len = 7;
 	err = can_pdo_download(ch, node_id, 1, data, len);
 	if (err) return err;
 
@@ -1294,7 +1322,60 @@ int can_pdo_rx3(int ch, unsigned char node_id, int target_position, unsigned int
 	data[6] = LOBYTE(HIWORD(profile_velocity));
 	data[7] = HIBYTE(HIWORD(profile_velocity));
 	len = 8;
-	err = can_pdo_download(ch, node_id, 1, data, len);
+	err = can_pdo_download(ch, node_id, 3, data, len);
+	if (err) return err;
+
+	return 0;
+}
+
+int can_set_homing_params(int ch, unsigned char node_id, long offset, char method, unsigned long speed1, unsigned long speed2, unsigned long acceleration)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+
+	// homing offset:
+	buf[0] = LOBYTE(LOWORD(offset));
+	buf[1] = HIBYTE(LOWORD(offset));
+	buf[2] = LOBYTE(HIWORD(offset));
+	buf[3] = HIBYTE(HIWORD(offset));
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_HOMING_OFFSET, 0, buf, buf_len);
+	if (err) return err;
+
+	// homing method:
+	buf[0] = method;
+	buf[1] = 0x00;
+	buf[2] = 0x00;
+	buf[3] = 0x00;
+	buf_len = 1;
+	err = can_sdo_download(ch, node_id, OD_HOMING_METHOD, 0, buf, buf_len);
+	if (err) return err;
+
+	// homing speed:
+	buf[0] = LOBYTE(LOWORD(speed1));
+	buf[1] = HIBYTE(LOWORD(speed1));
+	buf[2] = LOBYTE(HIWORD(speed1));
+	buf[3] = HIBYTE(HIWORD(speed1));
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_HOMING_SPEED, 1, buf, buf_len);
+	if (err) return err;
+
+	buf[0] = LOBYTE(LOWORD(speed2));
+	buf[1] = HIBYTE(LOWORD(speed2));
+	buf[2] = LOBYTE(HIWORD(speed2));
+	buf[3] = HIBYTE(HIWORD(speed2));
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_HOMING_SPEED, 2, buf, buf_len);
+	if (err) return err;
+
+	// homing acceleration:
+	buf[0] = LOBYTE(LOWORD(acceleration));
+	buf[1] = HIBYTE(LOWORD(acceleration));
+	buf[2] = LOBYTE(HIWORD(acceleration));
+	buf[3] = HIBYTE(HIWORD(acceleration));
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_HOMING_ACCELERATION, 0, buf, buf_len);
 	if (err) return err;
 
 	return 0;
@@ -1426,6 +1507,13 @@ int can_dump_motion_profile(int ch, unsigned char node_id)
 #ifdef CAN_PRINT_SDO_RESPONSE
 	if (!err) {
 		printf("\tTarget position = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
+	}
+#endif
+
+	err = can_sdo_upload(ch, node_id, OD_PROFILE_VELOCITY, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\tProfile velocity = %d\n", MAKELONG(MAKEWORD(buf[0], buf[1]), MAKEWORD(buf[2], buf[3])));
 	}
 #endif
 

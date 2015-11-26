@@ -15,7 +15,8 @@ typedef struct tagRxPDO1
 	union {
 		struct {
 			unsigned short control_word;
-			unsigned char reserved1[6];
+			unsigned char mode_of_operation;
+			unsigned char reserved1[5];
 		};
 		unsigned char data[8];
 	};
