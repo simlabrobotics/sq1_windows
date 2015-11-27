@@ -268,9 +268,9 @@ bool OpenCAN()
 	CAN_Ch[3] = getPCANChannelIndex("PCAN_PCIBUS4");
 #elif defined(IXXATCAN) || defined(SOFTINGCAN)
 	CAN_Ch[0] = 1;
-	CAN_Ch[1] = 2;
-	CAN_Ch[2] = 3;
-	CAN_Ch[3] = 4;
+	CAN_Ch[1] = 1;
+	CAN_Ch[2] = 1;
+	CAN_Ch[3] = 1;
 #elif defined(NICAN)
 	CAN_Ch[0] = 0;
 	CAN_Ch[1] = 1;

@@ -98,6 +98,7 @@ int canReadMsg(int bus, unsigned long &id, unsigned char &len, unsigned char *da
 		{
 			if (sCanMsg.uMsgInfo.Bits.rtr == 0)
 			{
+				id = sCanMsg.dwMsgId;
 				len = (int)( sCanMsg.uMsgInfo.Bits.dlc );
 				for(int nd=0; nd<len; nd++) data[nd] = sCanMsg.abData[nd];
 
