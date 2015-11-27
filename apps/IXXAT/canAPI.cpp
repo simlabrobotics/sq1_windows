@@ -21,19 +21,19 @@ extern "C" {
 #include "canDef.h"
 #include "canAPI.h"
 
+
+#define CH_COUNT			((int)4) // number of CAN channels
+
 CANAPI_BEGIN
-
-
-#define CH_COUNT			(int)2 // number of CAN channels
-
+CANAPI_EXTERN_C_BEGIN
 
 //////////////////////////////////////////////////////////////////////////
 // global variables
 //////////////////////////////////////////////////////////////////////////
-static HANDLE hDevice[CH_COUNT] = {(HANDLE) 0, (HANDLE) 0};  // device handle
-static LONG   lCtrlNo[CH_COUNT] = {         0,          0};  // controller number
-static HANDLE hCanCtl[CH_COUNT] = {(HANDLE)-1, (HANDLE)-1};  // controller handle 
-static HANDLE hCanChn[CH_COUNT] = {(HANDLE)-1, (HANDLE)-1};  // channel handle
+static HANDLE hDevice[CH_COUNT] = {(HANDLE) 0, (HANDLE) 0, (HANDLE) 0, (HANDLE) 0};  // device handle
+static LONG   lCtrlNo[CH_COUNT] = {         0,          0,          0,          0};  // controller number
+static HANDLE hCanCtl[CH_COUNT] = {(HANDLE)-1, (HANDLE)-1, (HANDLE)-1, (HANDLE)-1};  // controller handle 
+static HANDLE hCanChn[CH_COUNT] = {(HANDLE)-1, (HANDLE)-1, (HANDLE)-1, (HANDLE)-1};  // channel handle
 
 //////////////////////////////////////////////////////////////////////////
 // static function prototypes
@@ -44,214 +44,53 @@ void    FinalizeApp  ( UINT32 dwCanChNo );
 void    DisplayError ( /*UINT32 dwCanChNo,*/ HRESULT hResult );
 
 
-
-/**
-  This function transmit a CAN data frame.
-*/
-int canWrite(HANDLE handle,
-			 unsigned long id, 
-			 void * msg,
-			 unsigned int dlc,
-			 int mode)
+//////////////////////////////////////////////////////////////////////////
+// Public functions (CAN API)
+//////////////////////////////////////////////////////////////////////////
+int initCAN(int bus)
 {
-	if (handle < 0)
+	assert(bus >= 1 && bus <= CH_COUNT);
+	if (bus <= 0) // bus index should be greater than 0
 		return -1;
 
 	HRESULT hResult;
-	CANMSG  sCanMsg;
-	UINT8   i;
 
-	sCanMsg.dwTime   = 0;
-	sCanMsg.dwMsgId  = id;    // CAN message identifier
-
-	sCanMsg.uMsgInfo.Bytes.bType  = CAN_MSGTYPE_DATA;
-	sCanMsg.uMsgInfo.Bytes.bFlags = CAN_MAKE_MSGFLAGS(dlc,0,0,0,mode);
-	sCanMsg.uMsgInfo.Bits.srr     = 0;
-
-	for (i = 0; i < sCanMsg.uMsgInfo.Bits.dlc; i++)
-	{
-		sCanMsg.abData[i] = ((unsigned char*)msg)[i];
-	}
-
-	// write the CAN message into the transmit FIFO
-	hResult = canChannelSendMessage(handle, INFINITE, &sCanMsg);
-
-	if (hResult != VCI_OK)
-	{
-		DisplayError(hResult);
-	}
-
-	return hResult;
-}
-
-/**
-  This function opens a CAN data channel.
-*/
-int command_can_open(int ch)
-{
-	assert(ch >= 1 && ch <= CH_COUNT);
-
-	HRESULT hResult;
-
-	hResult = SelectDevice( ch-1, TRUE );
+	hResult = SelectDevice( bus-1, TRUE );
 	if ( VCI_OK != hResult ) {
 		DisplayError(hResult);
 		return hResult;
 	}
 
-	hResult = InitSocket( ch-1, lCtrlNo[ch-1] );
+	hResult = InitSocket( bus-1, lCtrlNo[bus-1] );
 	DisplayError(hResult);
 	return hResult;
 }
 
-/**
-  This function opens a CAN data channel.
-*/
-int command_can_open_ex(int ch, int type, int index)
+int freeCAN(int bus)
 {
-	return command_can_open(ch);
-}
-
-/**
-*/
-int command_can_reset(int ch)
-{
-	return -1;
-}
-
-/**
-*/
-int command_can_close(int ch)
-{
-	FinalizeApp(ch);
-	return 0;
-}
-
-/**
-*/
-int command_can_query_id(int ch)
-{
-	long Txid;
-	unsigned char data[8];
-
-	Txid = ((unsigned long)ID_CMD_QUERY_ID<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	canWrite(hCanChn[ch-1], Txid, data, 0, STD);
-
-	return 0;
-}
-
-/**
-*/
-int command_can_sys_init(int ch, int period_msec)
-{
-	long Txid;
-	unsigned char data[8];
-
-	Txid = ((unsigned long)ID_CMD_SET_PERIOD<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	data[0] = (unsigned char)period_msec;
-	canWrite(hCanChn[ch-1], Txid, data, 1, STD);
-
-	Sleep(10);
-
-	Txid = ((unsigned long)ID_CMD_SET_MODE_TASK<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	canWrite(hCanChn[ch-1], Txid, data, 0, STD);
-
-	Sleep(10);
-
-	Txid = ((unsigned long)ID_CMD_QUERY_STATE_DATA<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	canWrite(hCanChn[ch-1], Txid, data, 0, STD);
-
-	return 0;
-}
-
-/**
-*/
-int command_can_start(int ch)
-{
-	long Txid;
-	unsigned char data[8];
-
-	Txid = ((unsigned long)ID_CMD_QUERY_STATE_DATA<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	canWrite(hCanChn[ch-1], Txid, data, 0, STD);
-
-	Sleep(10);
-
-	Txid = ((unsigned long)ID_CMD_SET_SYSTEM_ON<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	canWrite(hCanChn[ch-1], Txid, data, 0, STD);
-
-	return 0;
-}
-
-/**
-*/
-int command_can_stop(int ch)
-{
-	long Txid;
-	unsigned char data[8];
-
-	Txid = ((unsigned long)ID_CMD_SET_SYSTEM_OFF<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	canWrite(hCanChn[ch-1], Txid, data, 0, STD);
-
-	return 0;
-}
-
-/**
-*/
-int command_can_AHRS_set(int ch, unsigned char rate, unsigned char mask)
-{
-	long Txid;
-	unsigned char data[8];
-
-	Txid = ((unsigned long)ID_CMD_AHRS_SET<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-	data[0] = (unsigned char)rate;
-	data[1] = (unsigned char)mask;
-	canWrite(hCanChn[ch-1], Txid, data, 2, STD);
-
-	return 0;
-}
-
-/**
-*/
-int write_current(int ch, int findex, short* pwm)
-{
-	long Txid;
-	unsigned char data[8];
-
-	if (findex >= 0 && findex < 4)
-	{
-		data[0] = (unsigned char)( (pwm[0] >> 8) & 0x00ff);
-		data[1] = (unsigned char)(pwm[0] & 0x00ff);
-
-		data[2] = (unsigned char)( (pwm[1] >> 8) & 0x00ff);
-		data[3] = (unsigned char)(pwm[1] & 0x00ff);
-
-		data[4] = (unsigned char)( (pwm[2] >> 8) & 0x00ff);
-		data[5] = (unsigned char)(pwm[2] & 0x00ff);
-
-		data[6] = (unsigned char)( (pwm[3] >> 8) & 0x00ff);
-		data[7] = (unsigned char)(pwm[3] & 0x00ff);
-
-		Txid = ((unsigned long)(ID_CMD_SET_TORQUE_1 + findex)<<6) | ((unsigned long)ID_COMMON <<3) | ((unsigned long)ID_DEVICE_MAIN);
-		canWrite(hCanChn[ch-1], Txid, data, 8, STD);
-	}
-	else
+	assert(bus >= 1 && bus <= CH_COUNT);
+	if (bus <= 0) // bus index should be greater than 0
 		return -1;
-	
+
+	FinalizeApp( bus-1 );
 	return 0;
 }
 
-/**
-*/
-int get_message(int ch, char* cmd, char* src, char* des, int* len, unsigned char* data, int blocking)
+int canReadMsg(int bus, unsigned long &id, unsigned char &len, unsigned char *data, bool blocking)
 {
+	assert(bus >= 1 && bus <= CH_COUNT);
+	if (bus <= 0) // bus index should be greater than 0
+		return -1;
+
 	HRESULT hResult;
 	CANMSG  sCanMsg;
+	HANDLE  hCAN = hCanChn[bus-1];
 
-	//hResult = canChannelReadMessage(hCanChn[ch-1], (blocking ? INFINITE : 0), &sCanMsg);
+	//hResult = canChannelReadMessage(hCAN, (blocking ? INFINITE : 0), &sCanMsg);
 	if (blocking)
-		hResult = canChannelReadMessage(hCanChn[ch-1], INFINITE, &sCanMsg);
+		hResult = canChannelReadMessage(hCAN, INFINITE, &sCanMsg);
 	else
-		hResult = canChannelPeekMessage(hCanChn[ch-1], &sCanMsg);
+		hResult = canChannelPeekMessage(hCAN, &sCanMsg);
 	
 	if (hResult == VCI_OK)
 	{
@@ -259,11 +98,8 @@ int get_message(int ch, char* cmd, char* src, char* des, int* len, unsigned char
 		{
 			if (sCanMsg.uMsgInfo.Bits.rtr == 0)
 			{
-				*cmd = (char)( (sCanMsg.dwMsgId >> 6) & 0x1f );
-				*des = (char)( (sCanMsg.dwMsgId >> 3) & 0x07 );
-				*src = (char)( sCanMsg.dwMsgId & 0x07 );
-				*len = (int)( sCanMsg.uMsgInfo.Bits.dlc );
-				for(int nd=0; nd<(*len); nd++) data[nd] = sCanMsg.abData[nd];
+				len = (int)( sCanMsg.uMsgInfo.Bits.dlc );
+				for(int nd=0; nd<len; nd++) data[nd] = sCanMsg.abData[nd];
 
 #ifdef _DEBUG
 				/*UINT8 j;
@@ -322,6 +158,45 @@ int get_message(int ch, char* cmd, char* src, char* des, int* len, unsigned char
 	
 	return hResult;
 }
+
+int canSendMsg(int bus, unsigned long id, unsigned char len, unsigned char *data, bool blocking)
+{
+	assert(bus >= 1 && bus <= CH_COUNT);
+	if (bus <= 0) // bus index should be greater than 0
+		return -1;
+
+	HRESULT hResult;
+	CANMSG  sCanMsg;
+	UINT8   i;
+	HANDLE  hCAN = hCanChn[bus-1];
+	UINT8   mode = STD;
+
+	sCanMsg.dwTime   = 0;
+	sCanMsg.dwMsgId  = id;    // CAN message identifier
+
+	sCanMsg.uMsgInfo.Bytes.bType  = CAN_MSGTYPE_DATA;
+	sCanMsg.uMsgInfo.Bytes.bFlags = CAN_MAKE_MSGFLAGS(len,0,0,0,mode);
+	sCanMsg.uMsgInfo.Bits.srr     = 0;
+
+	for (i = 0; i < sCanMsg.uMsgInfo.Bits.dlc; i++)
+	{
+		sCanMsg.abData[i] = ((unsigned char*)data)[i];
+	}
+
+	// write the CAN message into the transmit FIFO
+	hResult = canChannelSendMessage(hCAN, INFINITE, &sCanMsg);
+
+	if (hResult != VCI_OK)
+	{
+		DisplayError(hResult);
+	}
+
+	return hResult;
+}
+
+
+
+
 
 /**
   Selects the first CAN adapter.
@@ -523,5 +398,5 @@ void DisplayError( /*UINT32 dwCanChNo,*/ HRESULT hResult )
   }
 }
 
-
+CANAPI_EXTERN_C_END
 CANAPI_END
