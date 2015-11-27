@@ -64,6 +64,12 @@ int can_query_drive_modes(int ch, unsigned char node_id);
 
 // Binary interpreter:
 int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len);
+int can_bin_interprete_get_i(int ch, unsigned char node_id, unsigned char cmd[2], unsigned short index);
+int can_bin_interprete_get_f(int ch, unsigned char node_id, unsigned char cmd[2], unsigned short index);
+int can_bin_interprete_set_i(int ch, unsigned char node_id, unsigned char cmd[2], unsigned short index, long ival);
+int can_bin_interprete_set_f(int ch, unsigned char node_id, unsigned char cmd[2], unsigned short index, float fval);
+
+// Binary interpreter utilities:
 int can_bin_query_unit_mode(int ch, unsigned char node_id);
 int can_bin_set_unit_mode(int ch, unsigned char node_id, unsigned char um);
 

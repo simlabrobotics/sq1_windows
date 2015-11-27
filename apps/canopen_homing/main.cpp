@@ -122,6 +122,18 @@ void ProcessCANMessage(int index)
 		case COBTYPE_TxPDO2:
 			{
 				printf("\tTxPDO2[node=%d]: ", node_id);
+				printf("%c%c[%d] = ", data[0], data[1], (data[2] | ((unsigned short)(data[3]&0x3F)<<8)));
+				if ((data[3]&0x40) != 0) {
+					printf("ERROR(%04X %04Xh)", MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]));
+				}
+				else {
+					if ((data[3]&0x80) != 0) {
+						printf("%f", (float)(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7])));
+					}
+					else {
+						printf("%d", (int)(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7])));
+					}
+				}
 				printf("\n");
 			}
 			break;

@@ -870,36 +870,97 @@ int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsign
 	return 0;
 }
 
+int can_bin_interprete_get_i(int ch, unsigned char node_id, unsigned char cmd[2], unsigned short index)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	unsigned char buf[8];
+	unsigned short buf_len;
+
+	buf[0] = cmd[0];
+	buf[1] = cmd[1];
+	buf[2] = (unsigned char)(index & 0xFF);
+	buf[3] = (unsigned char)((index & 0x3F00) >> 8) | 0x40; // query, interger
+	buf[4] = 0x00;
+	buf[5] = 0x00;
+	buf[6] = 0x00;
+	buf[7] = 0x00;
+	buf_len = 8;
+
+	return can_bin_interprete(ch, node_id, buf, buf_len);
+}
+
+int can_bin_interprete_get_f(int ch, unsigned char node_id, unsigned char cmd[2], unsigned short index)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	unsigned char buf[8];
+	unsigned short buf_len;
+	
+	buf[0] = cmd[0];
+	buf[1] = cmd[1];
+	buf[2] = (unsigned char)(index & 0xFF);
+	buf[3] = (unsigned char)((index & 0x3F00) >> 8) | 0xC0; // query, float
+	buf[4] = 0x00;
+	buf[5] = 0x00;
+	buf[6] = 0x00;
+	buf[7] = 0x00;
+	buf_len = 8;
+
+	return can_bin_interprete(ch, node_id, buf, buf_len);
+}
+
+int can_bin_interprete_set_i(int ch, unsigned char node_id, unsigned char cmd[2], unsigned short index, long ival)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	unsigned char buf[8];
+	unsigned short buf_len;
+
+	buf[0] = cmd[0];
+	buf[1] = cmd[1];
+	buf[2] = (unsigned char)(index & 0xFF);
+	buf[3] = (unsigned char)((index & 0x3F00) >> 8) | 0x00; // set, interger
+	buf[4] = LOBYTE(LOWORD(ival));
+	buf[5] = HIBYTE(LOWORD(ival));
+	buf[6] = LOBYTE(HIWORD(ival));
+	buf[7] = HIBYTE(HIWORD(ival));
+	buf_len = 8;
+
+	return can_bin_interprete(ch, node_id, buf, buf_len);
+}
+
+int can_bin_interprete_set_f(int ch, unsigned char node_id, unsigned char cmd[2], unsigned short index, float fval)
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	unsigned char buf[8];
+	unsigned short buf_len;
+	
+	buf[0] = cmd[0];
+	buf[1] = cmd[1];
+	buf[2] = (unsigned char)(index & 0xFF);
+	buf[3] = (unsigned char)((index & 0x3F00) >> 8) | 0x80; // set, float
+	buf[4] = LOBYTE(LOWORD(fval));
+	buf[5] = HIBYTE(LOWORD(fval));
+	buf[6] = LOBYTE(HIWORD(fval));
+	buf[7] = HIBYTE(HIWORD(fval));
+	buf_len = 8;
+
+	return can_bin_interprete(ch, node_id, buf, buf_len);
+}
+
 int can_bin_query_unit_mode(int ch, unsigned char node_id)
 {
-	unsigned char data[8];
-
-	data[0] = 'U';
-	data[1] = 'M';
-	data[2] = 0x00;
-	data[3] = 0x40; // query, interger
-	data[4] = 0x00;
-	data[5] = 0x00;
-	data[6] = 0x00;
-	data[7] = 0x00;
-
-	return can_bin_interprete(ch, node_id, data, 8);
+	unsigned char cmd[2] = {'U', 'M'};
+	return can_bin_interprete_get_i(ch, node_id, cmd, 0); 
 }
 
 int can_bin_set_unit_mode(int ch, unsigned char node_id, unsigned char um)
 {
-	unsigned char data[8];
-
-	data[0] = 'U';
-	data[1] = 'M';
-	data[2] = 0x00;
-	data[3] = 0x00; // set, integer
-	data[4] = um;
-	data[5] = 0x00;
-	data[6] = 0x00;
-	data[7] = 0x00;
-
-	return can_bin_interprete(ch, node_id, data, 8);
+	unsigned char cmd[2] = {'U', 'M'};
+	long ival = (long)um;
+	return can_bin_interprete_set_i(ch, node_id, cmd, 0, ival); 
 }
 
 int can_os_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len)
@@ -964,6 +1025,11 @@ int can_map_txpdo1(int ch, unsigned char node_id)
 
 int can_map_txpdo2(int ch, unsigned char node_id)
 {
+	//---------------------------------------------------------------------
+	// DO NOT USER TxPDO2:
+	// 
+	// TxPDO2 is reserved for binary interpreter input(server -> client)
+	//---------------------------------------------------------------------
 	return 0;
 }
 
@@ -1093,6 +1159,11 @@ int can_map_rxpdo1(int ch, unsigned char node_id)
 
 int can_map_rxpdo2(int ch, unsigned char node_id)
 {
+	//---------------------------------------------------------------------
+	// DO NOT USER RxPDO2:
+	// 
+	// RxPDO2 is reserved for binary interpreter output(client -> server)
+	//---------------------------------------------------------------------
 	return 0;
 }
 
