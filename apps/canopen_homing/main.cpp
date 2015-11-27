@@ -30,7 +30,7 @@ const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, false};
 const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
 	{false, false, false},
 	{false, false, false},
-	{false, false, true},
+	{false, true, false},
 	{false, false, false}
 };
 bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};
@@ -139,9 +139,10 @@ void ProcessCANMessage(int index)
 			break;
 		case COBTYPE_TxPDO3:
 			{
-				printf("\tTxPDO3[node=%d]: ", node_id);
-				printf("position = %d", MAKELONG(MAKEWORD(data[0], data[1]), MAKEWORD(data[2], data[3])));
-				printf(", DI = ");
+				long enc_counter = MAKELONG(MAKEWORD(data[0], data[1]), MAKEWORD(data[2], data[3]));
+				printf("\tTxPDO3[node=%d]\n", node_id);
+				printf("\t\tposition = %.1f (deg) / %d (count)\n", COUNT2DEG(enc_counter), enc_counter);
+				printf("\t\tDI = ");
 				printBinary(data[6]);
 				printf(" ");
 				printBinary(data[5]);
@@ -202,8 +203,8 @@ void MainLoop()
 					for (int node = 0; node < NODE_COUNT; node++)
 					{
 						if (!NODE_Enabled[ch][node]) continue;
-//						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], targetPosition, targetVelocity);
-						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], controlWord, modeOfOperation);
+//						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition, targetVelocity);
+						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord, modeOfOperation);
 					}
 
 				}
@@ -360,13 +361,14 @@ void DriveInit()
 
 			// PDO mapping:
 			printf("PDO mapping...\n");
-			can_map_rxpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
-//			can_map_rxpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
+//			can_map_rxpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
+			can_map_rxpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
 			can_map_txpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
 			can_map_txpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set homing parameters:
-			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], 0, 3, 40960*2, 4096*2, 60000000);
+			//can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], 0, 3, 40960*4, 4096*2, 60000000);
+			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], -DEG2COUNT(90), 3, DEG2COUNT(5), DEG2COUNT(1), 60000000);
 			can_dump_homing_params(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set mode of operation:

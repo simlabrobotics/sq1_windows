@@ -139,10 +139,17 @@ void ProcessCANMessage(int index)
 			break;
 		case COBTYPE_TxPDO3:
 			{
-				printf("\tTxPDO3[node=%d]: ", node_id);
-				printf("position = %d", MAKELONG(MAKEWORD(data[0], data[1]), MAKEWORD(data[2], data[3])));
-				printf(", DI = ");
+				long enc_counter = MAKELONG(MAKEWORD(data[0], data[1]), MAKEWORD(data[2], data[3]));
+				printf("\tTxPDO3[node=%d]\n", node_id);
+				printf("\t\tposition = %.1f (deg) / %d (count)\n", COUNT2DEG(enc_counter), enc_counter);
+				printf("\t\tDI = ");
 				printBinary(data[6]);
+				printf(" ");
+				printBinary(data[5]);
+				printf(" ");
+				printBinary(data[4]);
+				/*printf(" ");
+				printBinary(data[4]);*/
 				printf("b\n");
 			}
 			break;
@@ -196,8 +203,8 @@ void MainLoop()
 					for (int node = 0; node < NODE_COUNT; node++)
 					{
 						if (!NODE_Enabled[ch][node]) continue;
-						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], targetPosition, targetVelocity);
-						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], controlWord, modeOfOperation);
+						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition, targetVelocity);
+						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord, modeOfOperation);
 					}
 
 				}
@@ -469,8 +476,8 @@ void SetModeOfOperation()
 void SetTargetPosition()
 {
 	printf("set target position...\n");
-	targetPosition = 10000;
-	targetVelocity = 409600;
+	targetPosition = DEG2COUNT(5);
+	targetVelocity = DEG2COUNT(5);
 	controlWord &= 0xFF8F; // masking irrelevant bits
 	//controlWord |= 0x2070; // set new point, target position is relative
 	controlWord |= 0x0070; // set new point, target position is relative

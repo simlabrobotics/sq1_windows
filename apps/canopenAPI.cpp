@@ -1093,6 +1093,7 @@ int can_map_txpdo4(int ch, unsigned char node_id)
 	return 0;
 }
 
+
 int can_map_rxpdo1(int ch, unsigned char node_id)
 {
 	int err;
@@ -1118,20 +1119,11 @@ int can_map_rxpdo1(int ch, unsigned char node_id)
 	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
 	if (err) return err;
 
-	// map mode of operation as the next 1 byte of the PDO:
-	buf[0] = 8;
+	// map profile target position as the next 4 bytes of the PDO:
+	buf[0] = 32;
 	buf[1] = 0;
-	buf[2] = LOBYTE(OD_MODE_OF_OPERATION);
-	buf[3] = HIBYTE(OD_MODE_OF_OPERATION);
-	buf_len = 4;
-	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
-	if (err) return err;
-
-	// map control word as the next 2 bytes of the PDO:
-	buf[0] = 16;
-	buf[1] = 0;
-	buf[2] = LOBYTE(OD_CONTROLWORD);
-	buf[3] = HIBYTE(OD_CONTROLWORD);
+	buf[2] = LOBYTE(OD_PROFILE_VELOCITY);
+	buf[3] = HIBYTE(OD_PROFILE_VELOCITY);
 	buf_len = 4;
 	err = can_sdo_download(ch, node_id, OD_RxPDO1_MAPPING, (++entry_num), buf, buf_len);
 	if (err) return err;
@@ -1183,20 +1175,20 @@ int can_map_rxpdo3(int ch, unsigned char node_id)
 	err = can_sdo_download(ch, node_id, OD_RxPDO3_MAPPING, 0, buf, buf_len);
 	if (err) return err;
 
-	// map profile target position as the 1st 4 bytes of the PDO:
-	buf[0] = 32;
+	// map mode of operation as the next 1 byte of the PDO:
+	buf[0] = 8;
 	buf[1] = 0;
-	buf[2] = LOBYTE(OD_PROFILED_TARGET_POSITION);
-	buf[3] = HIBYTE(OD_PROFILED_TARGET_POSITION);
+	buf[2] = LOBYTE(OD_MODE_OF_OPERATION);
+	buf[3] = HIBYTE(OD_MODE_OF_OPERATION);
 	buf_len = 4;
 	err = can_sdo_download(ch, node_id, OD_RxPDO3_MAPPING, (++entry_num), buf, buf_len);
 	if (err) return err;
 
-	// map profile target position as the next 4 bytes of the PDO:
-	buf[0] = 32;
+	// map control word as the next 2 bytes of the PDO:
+	buf[0] = 16;
 	buf[1] = 0;
-	buf[2] = LOBYTE(OD_PROFILE_VELOCITY);
-	buf[3] = HIBYTE(OD_PROFILE_VELOCITY);
+	buf[2] = LOBYTE(OD_CONTROLWORD);
+	buf[3] = HIBYTE(OD_CONTROLWORD);
 	buf_len = 4;
 	err = can_sdo_download(ch, node_id, OD_RxPDO3_MAPPING, (++entry_num), buf, buf_len);
 	if (err) return err;
@@ -1358,27 +1350,23 @@ int can_pdo_set_target_position(int ch, unsigned char node_id, int target_positi
 	return 0;
 }
 
-int can_pdo_rx1(int ch, unsigned char node_id, unsigned short& control_word,unsigned char mode_of_operation)
+int can_pdo_rx3(int ch, unsigned char node_id, unsigned short& control_word,unsigned char mode_of_operation)
 {
 	int err;
 	unsigned char data[8];
 	unsigned char len = 8;
 
-	data[0] = LOBYTE(LOWORD(10000));
-	data[1] = HIBYTE(LOWORD(10000));
-	data[2] = LOBYTE(HIWORD(10000));
-	data[3] = HIBYTE(HIWORD(10000));
-	data[4] = mode_of_operation;
-	data[5] = LOBYTE(control_word);
-	data[6] = HIBYTE(control_word);
-	len = 7;
-	err = can_pdo_download(ch, node_id, 1, data, len);
+	data[0] = mode_of_operation;
+	data[1] = LOBYTE(control_word);
+	data[2] = HIBYTE(control_word);
+	len = 3;
+	err = can_pdo_download(ch, node_id, 3, data, len);
 	if (err) return err;
 
 	return 0;
 }
 
-int can_pdo_rx3(int ch, unsigned char node_id, int target_position, unsigned int profile_velocity)
+int can_pdo_rx1(int ch, unsigned char node_id, int target_position, unsigned int profile_velocity)
 {
 	int err;
 	unsigned char data[8];
@@ -1393,7 +1381,7 @@ int can_pdo_rx3(int ch, unsigned char node_id, int target_position, unsigned int
 	data[6] = LOBYTE(HIWORD(profile_velocity));
 	data[7] = HIBYTE(HIWORD(profile_velocity));
 	len = 8;
-	err = can_pdo_download(ch, node_id, 3, data, len);
+	err = can_pdo_download(ch, node_id, 1, data, len);
 	if (err) return err;
 
 	return 0;

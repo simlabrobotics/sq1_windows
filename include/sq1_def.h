@@ -11,6 +11,21 @@
 #define USING_NAMESPACE_SQ1		using namespace sq1;
 #endif
 
+#ifndef M_PI
+#define M_PI			(3.14159265)
+#endif
+#ifndef RAD2DEG
+#define RAD2DEG(r)		(r*57.295779513082320876798154814105)
+#endif
+#ifndef DEG2RAD
+#define DEG2RAD(d)		(d*0.01745329251994329576923690768489)
+#endif
+#define COUNT2RAD(c)	(((double)c)*9.5873799242852576857380474343247e-7)
+#define COUNT2DEG(c)	(((double)c)*0.000054931640625)
+#define RAD2COUNT(r)	((long)(((double)r)*1043037.8350470452724949566316381))
+#define DEG2COUNT(d)	((long)(((double)d)*18204.444444444444444444444444444)) // 3276800 := 180 (deg)
+
+
 NAMESPACE_SQ1_BEGIN
 
 enum LegIndex
@@ -39,6 +54,8 @@ const unsigned char JointNodeID[LEG_COUNT][LEG_JDOF] = {
 	{0x0A, 0x0B, 0x0C}
 };
 
+
+#if 0
 class sQ1Leg;
 class sQ1Joint;
 class sQ1;
@@ -93,6 +110,7 @@ public:
 		}
 	}
 };
+#endif
 
 NAMESPACE_SQ1_END
 
