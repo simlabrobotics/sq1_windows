@@ -870,6 +870,22 @@ int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsign
 	return 0;
 }
 
+int can_bin_interprete_cmd(int ch, unsigned char node_id, unsigned char cmd[2])
+{
+	assert(ch >= 0 && ch < MAX_BUS);
+
+	unsigned char buf[8];
+	unsigned short buf_len;
+
+	buf[0] = cmd[0];
+	buf[1] = cmd[1];
+	buf[2] = 0x00;
+	buf[3] = 0x00;
+	buf_len = 4;
+
+	return can_bin_interprete(ch, node_id, buf, buf_len);
+}
+
 int can_bin_interprete_get_i(int ch, unsigned char node_id, unsigned char cmd[2], unsigned short index)
 {
 	assert(ch >= 0 && ch < MAX_BUS);

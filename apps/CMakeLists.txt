@@ -23,6 +23,7 @@ if( BUILD_CAN_SAMPLES )
 	add_subdirectory( canopen_SDO )
 	add_subdirectory( canopen_enum_devices )
 	add_subdirectory( canopen_homing )
+	add_subdirectory( canopen_binary_interpreter )
 endif()
 
 if( BUILD_APPS ) 
