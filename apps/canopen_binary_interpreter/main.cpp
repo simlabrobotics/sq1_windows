@@ -26,11 +26,11 @@ const double delT = 0.005;
 const unsigned int CAN_Ch_COUNT = LEG_COUNT;
 const unsigned int NODE_COUNT = LEG_JDOF;
 int CAN_Ch[CAN_Ch_COUNT] = {0, 0, 0, 0};
-const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, false, false};
+const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, false};
 const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
 	{false, false, false},
 	{false, false, false},
-	{false, true, false},
+	{false, false, true},
 	{false, false, false}
 };
 bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};

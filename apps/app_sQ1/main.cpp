@@ -28,10 +28,10 @@ const unsigned int NODE_COUNT = LEG_JDOF;
 int CAN_Ch[CAN_Ch_COUNT] = {0, 0, 0, 0};
 const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, false};
 const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
-	{false, false, false},
-	{false, false, false},
 	{false, false, true},
-	{false, false, false}
+	{false, false, true},
+	{false, false, true},
+	{false, false, true}
 };
 bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};
 uintptr_t ioThread[CAN_Ch_COUNT] = {0, 0, 0, 0};
@@ -205,7 +205,7 @@ void MainLoop()
 					for (int node = 0; node < NODE_COUNT; node++)
 					{
 						if (!NODE_Enabled[ch][node]) continue;
-						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition[LEG_COUNT][LEG_JDOF], targetVelocity[LEG_COUNT][LEG_JDOF]);
+						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition[ch][node], targetVelocity[ch][node]);
 						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord[ch][node], modeOfOperation);
 
 						controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
@@ -544,7 +544,6 @@ void ReadyToSwitchOn()
 void SwitchedOn()
 {
 	printf("switched on...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -561,7 +560,6 @@ void SwitchedOn()
 void OperationEnable()
 {
 	printf("operation enable...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -578,7 +576,6 @@ void OperationEnable()
 void Shutdown()
 {
 	printf("shutdown...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -596,7 +593,6 @@ void Shutdown()
 void EStop()
 {
 	printf("E-Stop...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -614,7 +610,6 @@ void EStop()
 void StartHoming()
 {
 	printf("start homing...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -632,7 +627,7 @@ void StartHoming()
 // Demo motions:
 void MotionStretch()
 {
-	printf("ready to switch on...\n");
+	printf("move to ZERO position...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -651,8 +646,7 @@ void MotionStretch()
 
 void MotionSquat()
 {
-	printf("move to zero position...\n");
-	printf("ready to switch on...\n");
+	printf("move to SQUAT position...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;

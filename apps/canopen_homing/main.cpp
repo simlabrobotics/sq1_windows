@@ -30,7 +30,7 @@ const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, false};
 const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
 	{false, false, false},
 	{false, false, false},
-	{false, true, false},
+	{false, false, true},
 	{false, false, false}
 };
 bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};
@@ -485,7 +485,6 @@ void ReadyToSwitchOn()
 void SwitchedOn()
 {
 	printf("switched on...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -502,7 +501,6 @@ void SwitchedOn()
 void OperationEnable()
 {
 	printf("operation enable...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -519,7 +517,6 @@ void OperationEnable()
 void Shutdown()
 {
 	printf("shutdown...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -537,7 +534,6 @@ void Shutdown()
 void EStop()
 {
 	printf("E-Stop...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -555,7 +551,6 @@ void EStop()
 void StartHoming()
 {
 	printf("start homing...\n");
-	printf("ready to switch on...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
