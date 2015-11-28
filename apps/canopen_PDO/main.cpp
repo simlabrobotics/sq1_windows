@@ -111,11 +111,11 @@ void MainLoop()
 			int c = _getch();
 			switch (c)
 			{
-			case 'q':
+			case 'q': case 'Q':
 				bRun = false;
 				break;
 
-			case 's':
+			case 's': case 'S':
 				can_sync(CAN_Ch);
 				break;
 			}

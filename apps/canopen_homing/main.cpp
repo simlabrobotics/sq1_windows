@@ -38,12 +38,10 @@ uintptr_t ioThread[CAN_Ch_COUNT] = {0, 0, 0, 0};
 int recvNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
 int sendNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
 double statTime[CAN_Ch_COUNT] = {-1.0, -1.0, -1.0, -1.0};
-sQ1_RobotMemory_t vars;
-long targetPosition = 0;
-unsigned long targetVelocity = 0;
+long homingStatus[LEG_COUNT][LEG_JDOF];
 unsigned char modeOfOperation = OP_MODE_PROFILED_POSITION;
-unsigned short controlWord = 0;
-unsigned short statusWord = 0;
+unsigned short controlWord[LEG_COUNT][LEG_JDOF];
+unsigned short statusWord[LEG_COUNT][LEG_JDOF];
 
 static void printBinary(unsigned char by)
 {
@@ -73,7 +71,6 @@ extern "C" int getPCANChannelIndex(const char* cname);
 /////////////////////////////////////////////////////////////////////////////////////////
 // device control
 void SetModeOfOperation();
-void SetTargetPosition();
 void ReadyToSwitchOn();
 void SwitchedOn();
 void OperationEnable();
@@ -203,14 +200,12 @@ void MainLoop()
 					for (int node = 0; node < NODE_COUNT; node++)
 					{
 						if (!NODE_Enabled[ch][node]) continue;
-//						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition, targetVelocity);
-						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord, modeOfOperation);
-					}
+						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord[ch][node], modeOfOperation);
 
+//						controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
+//						controlWord[ch][node] |= 0x00; // clear all operation mode specific bits
+					}
 				}
-				
-//				controlWord &= 0xFF8F; // masking irrelevant bits
-//				controlWord |= 0x00; // clear all operation mode specific bits
 
 				for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 				{
@@ -226,11 +221,11 @@ void MainLoop()
 			int c = _getch();
 			switch (c)
 			{
-			case 'q':
+			case 'q': case 'Q':
 				bRun = false;
 				break;
 
-			case 's':
+			case 's': case 'S':
 				{
 					for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 					{
@@ -256,12 +251,12 @@ void MainLoop()
 				OperationEnable();
 				break;
 
-			case '5':
-				StartHoming();
+			case '9':
+				Shutdown();
 				break;
 
-			case '6':
-				Shutdown();
+			case 'h': case 'H':
+				StartHoming();
 				break;
 			}
 		}
@@ -361,21 +356,13 @@ void DriveInit()
 
 			// PDO mapping:
 			printf("PDO mapping...\n");
-//			can_map_rxpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
 			can_map_rxpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
 			can_map_txpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
 			can_map_txpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set homing parameters:
-			//can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], 0, 3, 40960*4, 4096*2, 60000000);
 			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], -DEG2COUNT(90), 3, DEG2COUNT(5), DEG2COUNT(1), 60000000);
 			can_dump_homing_params(CAN_Ch[ch], JointNodeID[ch][node]);
-
-			// set mode of operation:
-//			printf("set mode of operation...\n");
-//			can_set_mode_of_operation(CAN_Ch[ch], JointNodeID[ch][node], OP_MODE_PROFILED_POSITION);
-//			printf("query mode of operation...\n");
-//			can_query_mode_of_operation_display(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set communication mode OPERATIONAL:
 			printf("set communication mode OPERATIONAL...\n");
@@ -407,10 +394,6 @@ void DriveOff()
 			// flush can messages:
 			printf("flush can messages...\n");
 			can_flush(CAN_Ch[ch], JointNodeID[ch][node]);
-
-			// servo off:
-			//printf("servo off...\n");
-			//can_servo_off(CAN_Ch, NODE_ID, controlWord);
 		}
 	}
 }
@@ -455,13 +438,18 @@ void StopCANListenThread()
 void PrintInstruction()
 {
 	printf("--------------------------------------------------\n");
-	printf("mySQ1: ");
+	printf("sQ1 homing demo: ");
 
 	printf("Keyboard Commands:\n");
-	printf("1: Stretch All Legs Downwards\n");
-	printf("2: Squat Motion\n");	
-	printf("3: Walk-Ready Position\n");
-	printf("4: Start Walk\n");
+	printf("1: Set position control mode\n");
+	printf("2: Ready to switch on\n");
+	printf("3: Switch on\n");
+	printf("4: Operation enable\n");
+	printf("9: Shutdown\n");
+	printf("\n");
+
+	printf("H: Homing\n");
+	printf("\n");
 
 	printf("S: Update encoder & DI values\n");
 	printf("E: E-STOP\n");
@@ -478,52 +466,108 @@ void SetModeOfOperation()
 	modeOfOperation = OP_MODE_HOMING;
 }
 
-void SetTargetPosition()
-{
-	printf("set target position...\n");
-	targetPosition = 10000;
-	targetVelocity = 409600;
-	controlWord &= 0xFF8F; // masking irrelevant bits
-	//controlWord |= 0x2070; // set new point, target position is relative
-	controlWord |= 0x0070; // set new point, target position is relative
-}
-
 void ReadyToSwitchOn()
 {
 	printf("ready to switch on...\n");
-	controlWord &= 0xFF78; // masking irrelevant bits
-	controlWord |= 0x06;
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch][node]) continue;
+	
+			controlWord[ch][node] &= 0xFF78; // masking irrelevant bits
+			controlWord[ch][node] |= 0x06;
+		}
+	}
 }
 
 void SwitchedOn()
 {
 	printf("switched on...\n");
-	controlWord &= 0xFF70; // masking irrelevant bits
-	controlWord |= 0x07;
+	printf("ready to switch on...\n");
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch][node]) continue;
+	
+			controlWord[ch][node] &= 0xFF70; // masking irrelevant bits
+			controlWord[ch][node] |= 0x07;
+		}
+	}
 }
 
 void OperationEnable()
 {
 	printf("operation enable...\n");
-	controlWord &= 0xFF70; // masking irrelevant bits
-	controlWord |= 0x0F;
+	printf("ready to switch on...\n");
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch][node]) continue;
+	
+			controlWord[ch][node] &= 0xFF70; // masking irrelevant bits
+			controlWord[ch][node] |= 0x0F;
+		}
+	}
 }
 
 void Shutdown()
 {
 	printf("shutdown...\n");
-	//controlWord &= 0xFF7D; // masking irrelevant bits
-	//controlWord |= 0x00;
-	controlWord = 0x00;
+	printf("ready to switch on...\n");
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch][node]) continue;
+	
+			//controlWord[ch][node] &= 0xFF7D; // masking irrelevant bits
+			//controlWord[ch][node] |= 0x00;
+			controlWord[ch][node] = 0x00;
+		}
+	}
+}
+
+void EStop()
+{
+	printf("E-Stop...\n");
+	printf("ready to switch on...\n");
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch][node]) continue;
+	
+			//controlWord[ch][node] &= 0xFF7D; // masking irrelevant bits
+			//controlWord[ch][node] |= 0x00;
+			controlWord[ch][node] = 0x00;
+		}
+	}
 }
 
 void StartHoming()
 {
 	printf("start homing...\n");
-	controlWord &= 0xFFEF; // masking irrelevant bits
-	controlWord |= 0x10;
+	printf("ready to switch on...\n");
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch][node]) continue;
+	
+			controlWord[ch][node] &= 0xFFEF; // masking irrelevant bits
+			controlWord[ch][node] |= 0x10;
+		}
+	}
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Demo motions:
@@ -549,7 +593,9 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	PrintInstruction();
 
-	memset(&vars, 0, sizeof(vars));
+	memset(controlWord, 0, LEG_COUNT*LEG_JDOF*sizeof(controlWord[0][0]));
+	memset(statusWord, 0, LEG_COUNT*LEG_JDOF*sizeof(statusWord[0][0]));
+	memset(homingStatus, 0, LEG_COUNT*LEG_JDOF*sizeof(homingStatus[0][0]));
 
 	// open CAN channel:
 	if (!OpenCAN())
