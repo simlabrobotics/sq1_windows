@@ -26,12 +26,12 @@ const double delT = 0.005;
 const unsigned int CAN_Ch_COUNT = LEG_COUNT;
 const unsigned int NODE_COUNT = LEG_JDOF;
 int CAN_Ch[CAN_Ch_COUNT] = {0, 0, 0, 0};
-const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, false};
+const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, true};
 const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
-	{false, false, false},
-	{false, false, false},
-	{false, false, true},
-	{false, false, false}
+	{true, true, true},
+	{true, true, true},
+	{true, true, true},
+	{true, true, true}
 };
 bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};
 uintptr_t ioThread[CAN_Ch_COUNT] = {0, 0, 0, 0};
@@ -39,6 +39,18 @@ int recvNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
 int sendNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
 double statTime[CAN_Ch_COUNT] = {-1.0, -1.0, -1.0, -1.0};
 long homingStatus[LEG_COUNT][LEG_JDOF];
+const long homingOffset[LEG_COUNT][LEG_JDOF] = {
+	{0, -DEG2COUNT(80)-20000,  DEG2COUNT(80)+30000},
+	{0,  DEG2COUNT(80)+10000, -DEG2COUNT(80)-40000},
+	{0, -DEG2COUNT(80)-30000, -DEG2COUNT(80)-30000},
+	{0,  DEG2COUNT(80)+50000,  DEG2COUNT(80)+30000}
+};
+const char homingMethod[LEG_COUNT][LEG_JDOF] = {
+	{HM_CURRENT_POSITION, HM_POSHOMESW_INDEXPULSE_N, HM_NEGHOMESW_INDEXPULSE_N},
+	{HM_CURRENT_POSITION, HM_NEGHOMESW_INDEXPULSE_N, HM_POSHOMESW_INDEXPULSE_N},
+	{HM_CURRENT_POSITION, HM_POSHOMESW_INDEXPULSE_N, HM_POSHOMESW_INDEXPULSE_N},
+	{HM_CURRENT_POSITION, HM_NEGHOMESW_INDEXPULSE_N, HM_NEGHOMESW_INDEXPULSE_N}
+};
 unsigned char modeOfOperation = OP_MODE_NO_MODE;
 unsigned short controlWord[LEG_COUNT][LEG_JDOF];
 unsigned short statusWord[LEG_COUNT][LEG_JDOF];
@@ -118,7 +130,7 @@ void ProcessCANMessage(int index)
 				printf("\tTxPDO2[node=%d]: ", node_id);
 				printf("%c%c[%d] = ", data[0], data[1], (data[2] | ((unsigned short)(data[3]&0x3F)<<8)));
 				if ((data[3]&0x40) != 0) {
-					printf("ERROR(%04X %04Xh)", MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]));
+					printf("ERROR(%04X %04Xh)", MAKEWORD(data[6], data[7]), MAKEWORD(data[4], data[5]));
 				}
 				else {
 					if ((data[3]&0x80) != 0) {
@@ -358,7 +370,7 @@ void DriveInit()
 			can_map_txpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set homing parameters:
-			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], -DEG2COUNT(90), 3, DEG2COUNT(5), DEG2COUNT(1), 60000000);
+			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], homingOffset[ch][node], homingMethod[ch][node], DEG2COUNT(5), DEG2COUNT(1), 60000000);
 			can_dump_homing_params(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set communication mode OPERATIONAL:
@@ -638,7 +650,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!OpenCAN())
 		return -1;
 
-	DriveReset();
+//	DriveReset();
 	DriveInit();
 
 	// start periodic communication:

@@ -26,18 +26,19 @@ const double delT = 0.005;
 const unsigned int CAN_Ch_COUNT = LEG_COUNT;
 const unsigned int NODE_COUNT = LEG_JDOF;
 int CAN_Ch[CAN_Ch_COUNT] = {0, 0, 0, 0};
-const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, false};
+const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {true, true, true, true};
 const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
-	{false, false, false},
-	{false, false, false},
-	{false, false, true},
-	{false, false, false}
+	{true, true, true},
+	{true, true, true},
+	{true, true, true},
+	{true, true, true}
 };
 bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};
 uintptr_t ioThread[CAN_Ch_COUNT] = {0, 0, 0, 0};
 int recvNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
 int sendNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
 double statTime[CAN_Ch_COUNT] = {-1.0, -1.0, -1.0, -1.0};
+unsigned char selectedNode = NODEID_GLOBAL;
 
 static void printBinary(unsigned char by)
 {
@@ -105,14 +106,14 @@ void ProcessCANMessage(int index)
 				printf("\tTxPDO2[node=%d]: ", node_id);
 				printf("%c%c[%d] = ", data[0], data[1], (data[2] | ((unsigned short)(data[3]&0x3F)<<8)));
 				if ((data[3]&0x40) != 0) {
-					printf("ERROR(%04X %04Xh)", MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]));
+					printf("ERROR(%04X %04Xh)", MAKEWORD(data[6], data[7]), MAKEWORD(data[4], data[5]));
 				}
 				else {
 					if ((data[3]&0x80) != 0) {
-						printf("%f", (float)(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7])));
+						printf("%f", (float)(MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))));
 					}
 					else {
-						printf("%d", (int)(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7])));
+						printf("%d", (int)(MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]))));
 					}
 				}
 				printf("\n");
@@ -196,29 +197,32 @@ void ProcessCmd(char* szCmd)
 	// parse command:
 	cmd_ptr = 2;
 
-	if (cmd_len == 2) {
-		cmd_type = 1;
-	}
-	else {
-		if (szCmd[cmd_ptr] == '[') {
-			szCmd[cmd_ptr++] = '\0';
-			index_ptr = (const char*)(szCmd+cmd_ptr);
+	if (szCmd[cmd_ptr] == '[') {
+		szCmd[cmd_ptr++] = '\0';
+		index_ptr = (const char*)(szCmd+cmd_ptr);
 
-			while (szCmd[cmd_ptr] != '\0') {
-				if (szCmd[cmd_ptr] == ']') {
-					break;
-				}
-				cmd_ptr++;
+		while (szCmd[cmd_ptr] != '\0') {
+			if (szCmd[cmd_ptr] == ']') {
+				break;
 			}
-			if (cmd_ptr >= cmd_len) {
-				printf("Failed. [] is mis-matching.\n");
-				return;
-			}
-
-			szCmd[cmd_ptr++] = '\0';
-			cmd_index = atoi(index_ptr);
+			cmd_ptr++;
+		}
+		if (cmd_ptr >= cmd_len) {
+			printf("Failed. [] is mis-matching.\n");
+			return;
 		}
 
+		szCmd[cmd_ptr++] = '\0';
+		cmd_index = atoi(index_ptr);
+	}
+	else {
+		cmd_index = 0;
+	}
+
+	if (cmd_ptr == cmd_len) {
+		cmd_type = 1; // excute/query with index
+	}
+	else {
 		if (szCmd[cmd_ptr] != '=' || (cmd_ptr+1 >= cmd_len)) {
 			printf("Failed. RVal is missing.\n");
 			return;
@@ -249,7 +253,7 @@ void ProcessCmd(char* szCmd)
 	switch (cmd_type)
 	{
 	case 1:
-		printf("%c%c", szCmd[0], szCmd[1]);
+		printf("%c%c %d", szCmd[0], szCmd[1], cmd_index);
 		break;
 	case 2:
 		printf("%c%c %d %d", szCmd[0], szCmd[1], cmd_index, cmd_rval_i);
@@ -266,13 +270,17 @@ void ProcessCmd(char* szCmd)
 		for (int node = 0; node < NODE_COUNT; node++) 
 		{
 			if (!NODE_Enabled[ch][node]) continue;
+
+			if (NODEID_GLOBAL != selectedNode &&
+				JointNodeID[ch][node] != selectedNode)
+				continue;
 			
 			printf("send command to node(%d, %d)...\n", CAN_Ch[ch], JointNodeID[ch][node]);
 
 			switch (cmd_type)
 			{
 			case 1:
-				can_bin_interprete_cmd(CAN_Ch[ch], JointNodeID[ch][node], (unsigned char*)szCmd);
+				can_bin_interprete_get_i(CAN_Ch[ch], JointNodeID[ch][node], (unsigned char*)szCmd, (unsigned short)cmd_index);
 				break;
 			case 2:
 				can_bin_interprete_set_i(CAN_Ch[ch], JointNodeID[ch][node], (unsigned char*)szCmd, (unsigned short)cmd_index, cmd_rval_i);
@@ -292,6 +300,7 @@ void MainLoop()
 	bool bRun = true;
 	static int sync_counter = 0;
 	char szCmd[256];
+	int node_select;
 
 	while (bRun)
 	{
@@ -316,15 +325,29 @@ void MainLoop()
 		}*/
 
 
-		printf("> ");
+		printf("%d> ", selectedNode);
 		scanf_s("%s", szCmd, _countof(szCmd));
 
 		if (!_stricmp(szCmd, "quit") || !_stricmp(szCmd, "exit")) {
 			bRun = false;
 		}
+		else if (!_stricmp(szCmd, "node")) {
+			printf("select node(0(all), 1~12) = ");
+			scanf_s("%d", &node_select, 4);
+			if (node_select >= 0 && node_select <= 12)
+				selectedNode = (unsigned char)node_select;
+		}
 		else {
-			if (strlen(szCmd) >= 2)
+			if (strlen(szCmd) >= 2) {
 				ProcessCmd(szCmd);
+
+				Sleep(500);
+				for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+				{
+					if (!CAN_Ch_Enabled[ch]) continue;
+					ProcessCANMessage(ch);
+				}
+			}
 		}
 	}
 }
@@ -520,20 +543,20 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!OpenCAN())
 		return -1;
 
-	DriveReset();
+//	DriveReset();
 	DriveInit();
 
 	// start periodic communication:
-	printf("start periodic communication...\n");
-	StartCANListenThread();
+//	printf("start periodic communication...\n");
+//	StartCANListenThread();
 
 	// loop wait user input:
 	printf("main loop...\n");
 	MainLoop();
 
 	// stop periodic communication:
-	printf("stop periodic communication...\n");
-	StopCANListenThread();
+//	printf("stop periodic communication...\n");
+//	StopCANListenThread();
 	
 	DriveOff();
 

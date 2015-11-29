@@ -26,12 +26,12 @@ const double delT = 0.005;
 const unsigned int CAN_Ch_COUNT = LEG_COUNT;
 const unsigned int NODE_COUNT = LEG_JDOF;
 int CAN_Ch[CAN_Ch_COUNT] = {0, 0, 0, 0};
-const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, false};
+const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {true, false, false, false};
 const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
-	{false, false, false},
-	{false, false, false},
-	{false, false, true},
-	{false, false, false}
+	{true, true, true},
+	{true, true, true},
+	{true, true, true},
+	{true, true, true}
 };
 bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};
 uintptr_t ioThread[CAN_Ch_COUNT] = {0, 0, 0, 0};
@@ -42,8 +42,20 @@ sQ1_RobotMemory_t vars;
 long targetPosition[LEG_COUNT][LEG_JDOF];
 unsigned long targetVelocity[LEG_COUNT][LEG_JDOF];
 long homingStatus[LEG_COUNT][LEG_JDOF];
+const long homingOffset[LEG_COUNT][LEG_JDOF] = {
+	{0, -DEG2COUNT(80)-20000,  DEG2COUNT(80)+30000},
+	{0,  DEG2COUNT(80)+10000, -DEG2COUNT(80)-40000},
+	{0, -DEG2COUNT(80)-30000, -DEG2COUNT(80)-30000},
+	{0,  DEG2COUNT(80)+50000,  DEG2COUNT(80)+30000}
+};
+const char homingMethod[LEG_COUNT][LEG_JDOF] = {
+	{HM_CURRENT_POSITION, HM_POSHOMESW_INDEXPULSE_N, HM_NEGHOMESW_INDEXPULSE_N},
+	{HM_CURRENT_POSITION, HM_NEGHOMESW_INDEXPULSE_N, HM_POSHOMESW_INDEXPULSE_N},
+	{HM_CURRENT_POSITION, HM_POSHOMESW_INDEXPULSE_N, HM_POSHOMESW_INDEXPULSE_N},
+	{HM_CURRENT_POSITION, HM_NEGHOMESW_INDEXPULSE_N, HM_NEGHOMESW_INDEXPULSE_N}
+};
 long motionStatus[LEG_COUNT][LEG_JDOF];
-unsigned char modeOfOperation = OP_MODE_NO_MODE;
+unsigned char modeOfOperation = OP_MODE_PROFILED_POSITION;
 unsigned short controlWord[LEG_COUNT][LEG_JDOF];
 unsigned short statusWord[LEG_COUNT][LEG_JDOF];
 
@@ -87,6 +99,7 @@ void UpdateStatus(int ch, unsigned char node_id, unsigned short status_word);
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // motion declarations
+void MotionZero();
 void MotionStretch();
 void MotionSquat();
 void MotionWalkReady();
@@ -130,7 +143,7 @@ void ProcessCANMessage(int index)
 				printf("\tTxPDO2[node=%d]: ", node_id);
 				printf("%c%c[%d] = ", data[0], data[1], (data[2] | ((unsigned short)(data[3]&0x3F)<<8)));
 				if ((data[3]&0x40) != 0) {
-					printf("ERROR(%04X %04Xh)", MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]));
+					printf("ERROR(%04X %04Xh)", MAKEWORD(data[6], data[7]), MAKEWORD(data[4], data[5]));
 				}
 				else {
 					if ((data[3]&0x80) != 0) {
@@ -285,6 +298,10 @@ void MainLoop()
 					switch (c)
 					{
 					case 'z': case 'Z':
+						MotionZero();
+						break;
+
+					case 'u': case 'U':
 						MotionStretch();
 						break;
 
@@ -414,7 +431,7 @@ void DriveInit()
 			can_map_txpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set homing parameters:
-			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], -DEG2COUNT(90), 3, DEG2COUNT(5), DEG2COUNT(1), 60000000);
+			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], homingOffset[ch][node], homingMethod[ch][node], DEG2COUNT(5), DEG2COUNT(1), 60000000);
 			can_dump_homing_params(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set communication mode OPERATIONAL:
@@ -504,8 +521,9 @@ void PrintInstruction()
 	printf("H: Homing\n");
 	printf("\n");
 	
-	printf("Z: Stretch All Legs Downwards\n");
-	printf("D: Squat Motion\n");	
+	printf("Z: Move to Zero position\n");
+	printf("U: Stretch All Legs (stand UP)\n");
+	printf("D: Squat Motion (sit DOWN)\n");	
 	printf("R: Walk-Ready Position (not implemented yet.)\n");
 	printf("W: Start Walk (not implemented yet.)\n");
 	printf("\n");
@@ -703,7 +721,7 @@ void SetTargetPosition()
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Demo motions:
-void MotionStretch()
+void MotionZero()
 {
 	printf("move to ZERO position...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
@@ -722,8 +740,47 @@ void MotionStretch()
 	}
 }
 
+void MotionStretch()
+{
+	static const unsigned long target_velocity[LEG_COUNT][LEG_JDOF] = {
+		{0, DEG2COUNT(20), DEG2COUNT(40)},
+		{0, DEG2COUNT(20), DEG2COUNT(40)},
+		{0, DEG2COUNT(20), DEG2COUNT(40)},
+		{0, DEG2COUNT(20), DEG2COUNT(40)}
+	};
+
+	printf("move to STRETCH position...\n");
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch][node]) continue;
+	
+			targetPosition[ch][node] = DEG2COUNT(0);
+			targetVelocity[ch][node] = target_velocity[ch][node];
+
+			controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
+			controlWord[ch][node] |= 0x0030; // set new point, target position is absolute
+		}
+	}
+}
+
 void MotionSquat()
 {
+	static const long target_position[LEG_COUNT][LEG_JDOF] = {
+		{0, -DEG2COUNT(30), -DEG2COUNT(60)},
+		{0,  DEG2COUNT(30),  DEG2COUNT(60)},
+		{0,  DEG2COUNT(30),  DEG2COUNT(60)},
+		{0, -DEG2COUNT(30), -DEG2COUNT(60)}
+	};
+	static const unsigned long target_velocity[LEG_COUNT][LEG_JDOF] = {
+		{0, DEG2COUNT(20), DEG2COUNT(40)},
+		{0, DEG2COUNT(20), DEG2COUNT(40)},
+		{0, DEG2COUNT(20), DEG2COUNT(40)},
+		{0, DEG2COUNT(20), DEG2COUNT(40)}
+	};
+
 	printf("move to SQUAT position...\n");
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
@@ -732,8 +789,8 @@ void MotionSquat()
 		{
 			if (!NODE_Enabled[ch][node]) continue;
 	
-			targetPosition[ch][node] = DEG2COUNT(20);
-			targetVelocity[ch][node] = DEG2COUNT(10);
+			targetPosition[ch][node] = target_position[ch][node];
+			targetVelocity[ch][node] = target_velocity[ch][node];
 
 			controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
 			controlWord[ch][node] |= 0x0030; // set new point, target position is absolute
@@ -765,7 +822,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++) {
 		for (int node = 0; node < NODE_COUNT; node++)  {
 			if (node == 0) homingStatus[ch][node] = HOMING_DONE;
-			else homingStatus[ch][node] = HOMING_NONE;
+			else homingStatus[ch][node] = HOMING_DONE;
 		}
 	}
 
@@ -773,7 +830,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!OpenCAN())
 		return -1;
 
-	DriveReset();
+//	DriveReset();
 	DriveInit();
 
 	// start periodic communication:
