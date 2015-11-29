@@ -548,6 +548,10 @@ void EStop()
 void StartHoming()
 {
 	printf("start homing...\n");
+
+	printf("set mode of operation(HOMING)...\n");
+	modeOfOperation = OP_MODE_HOMING;
+
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -623,6 +627,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	memset(controlWord, 0, LEG_COUNT*LEG_JDOF*sizeof(controlWord[0][0]));
 	memset(statusWord, 0, LEG_COUNT*LEG_JDOF*sizeof(statusWord[0][0]));
 	memset(homingStatus, 0, LEG_COUNT*LEG_JDOF*sizeof(homingStatus[0][0]));
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++) {
+		for (int node = 0; node < NODE_COUNT; node++)  {
+			if (node == 0) homingStatus[ch][node] = HOMING_DONE;
+			else homingStatus[ch][node] = HOMING_NONE;
+		}
+	}
 
 	// open CAN channel:
 	if (!OpenCAN())

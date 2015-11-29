@@ -28,10 +28,10 @@ const unsigned int NODE_COUNT = LEG_JDOF;
 int CAN_Ch[CAN_Ch_COUNT] = {0, 0, 0, 0};
 const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {false, false, true, false};
 const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
+	{false, false, false},
+	{false, false, false},
 	{false, false, true},
-	{false, false, true},
-	{false, false, true},
-	{false, false, true}
+	{false, false, false}
 };
 bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};
 uintptr_t ioThread[CAN_Ch_COUNT] = {0, 0, 0, 0};
@@ -268,6 +268,10 @@ void MainLoop()
 				Shutdown();
 				break;
 
+			case 'h': case 'H':
+				StartHoming();
+				break;
+
 			default:
 				{ 
 					//
@@ -280,10 +284,6 @@ void MainLoop()
 
 					switch (c)
 					{
-					case 'h': case 'H':
-						StartHoming();
-						break;
-
 					case 'z': case 'Z':
 						MotionStretch();
 						break;
@@ -413,11 +413,9 @@ void DriveInit()
 			can_map_txpdo1(CAN_Ch[ch], JointNodeID[ch][node]);
 			can_map_txpdo3(CAN_Ch[ch], JointNodeID[ch][node]);
 
-			// set mode of operation:
-//			printf("set mode of operation...\n");
-//			can_set_mode_of_operation(CAN_Ch[ch], JointNodeID[ch][node], OP_MODE_PROFILED_POSITION);
-//			printf("query mode of operation...\n");
-//			can_query_mode_of_operation_display(CAN_Ch[ch], JointNodeID[ch][node]);
+			// set homing parameters:
+			can_set_homing_params(CAN_Ch[ch], JointNodeID[ch][node], -DEG2COUNT(90), 3, DEG2COUNT(5), DEG2COUNT(1), 60000000);
+			can_dump_homing_params(CAN_Ch[ch], JointNodeID[ch][node]);
 
 			// set communication mode OPERATIONAL:
 			printf("set communication mode OPERATIONAL...\n");
@@ -523,28 +521,8 @@ void PrintInstruction()
 // device control:
 void SetModeOfOperation()
 {
-	printf("set mode of operation...\n");
+	printf("set mode of operation(PROFILED_POSITION)...\n");
 	modeOfOperation = OP_MODE_PROFILED_POSITION;
-}
-
-void SetTargetPosition()
-{
-	printf("set target position...\n");
-	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
-	{
-		if (!CAN_Ch_Enabled[ch]) continue;
-		for (int node = 0; node < NODE_COUNT; node++) 
-		{
-			if (!NODE_Enabled[ch][node]) continue;
-
-			targetPosition[ch][node] = DEG2COUNT(5);
-			targetVelocity[ch][node] = DEG2COUNT(10);
-
-			controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
-			//controlWord[ch][node] |= 0x2070; // set new point, target position is relative
-			controlWord[ch][node] |= 0x0070; // set new point, target position is relative
-		}
-	}	
 }
 
 void ReadyToSwitchOn()
@@ -632,6 +610,10 @@ void EStop()
 void StartHoming()
 {
 	printf("start homing...\n");
+
+	printf("set mode of operation(HOMING)...\n");
+	modeOfOperation = OP_MODE_HOMING;
+
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 	{
 		if (!CAN_Ch_Enabled[ch]) continue;
@@ -689,6 +671,7 @@ void UpdateStatus(int ch, unsigned char node_id, unsigned short status_word)
 
 					if (GetHomingDone() == HOMING_DONE) {
 						printf("HOMING for all joints has been completed!\n");
+						SetModeOfOperation();
 					}
 				}
 			}
@@ -696,6 +679,26 @@ void UpdateStatus(int ch, unsigned char node_id, unsigned short status_word)
 			return;
 		}
 	}
+}
+
+void SetTargetPosition()
+{
+	printf("set target position...\n");
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch][node]) continue;
+
+			targetPosition[ch][node] = DEG2COUNT(5);
+			targetVelocity[ch][node] = DEG2COUNT(10);
+
+			controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
+			//controlWord[ch][node] |= 0x2070; // set new point, target position is relative
+			controlWord[ch][node] |= 0x0070; // set new point, target position is relative
+		}
+	}	
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
