@@ -54,6 +54,21 @@ const unsigned char JointNodeID[LEG_COUNT][LEG_JDOF] = {
 	{0x0A, 0x0B, 0x0C}
 };
 
+enum HomingStatus
+{
+	HOMING_NONE = 0x00,
+	HOMING_INIT,
+	HOMING_DONE,
+	HOMING_ERROR
+};
+
+enum MotionStatus
+{
+	MOTION_NONE = 0x00,
+	MOTION_INIT,
+	MOTION_DONE,
+	MOTION_ERROR
+};
 
 #if 0
 class sQ1Leg;

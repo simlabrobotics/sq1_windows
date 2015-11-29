@@ -42,7 +42,8 @@ sQ1_RobotMemory_t vars;
 long targetPosition[LEG_COUNT][LEG_JDOF];
 unsigned long targetVelocity[LEG_COUNT][LEG_JDOF];
 long homingStatus[LEG_COUNT][LEG_JDOF];
-unsigned char modeOfOperation = OP_MODE_PROFILED_POSITION;
+long motionStatus[LEG_COUNT][LEG_JDOF];
+unsigned char modeOfOperation = OP_MODE_NO_MODE;
 unsigned short controlWord[LEG_COUNT][LEG_JDOF];
 unsigned short statusWord[LEG_COUNT][LEG_JDOF];
 
@@ -81,6 +82,8 @@ void OperationEnable();
 void Shutdown();
 void EStop();
 void StartHoming();
+long GetHomingDone();
+void UpdateStatus(int ch, unsigned char node_id, unsigned short status_word);
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // motion declarations
@@ -113,6 +116,7 @@ void ProcessCANMessage(int index)
 
 		case COBTYPE_TxPDO1:
 			{
+				UpdateStatus(index, node_id, MAKEWORD(data[0], data[1]));
 				printf("\tTxPDO1[node=%d]: ", node_id);
 				printf("status word = ");
 				printBinary(data[1]);
@@ -208,8 +212,11 @@ void MainLoop()
 						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition[ch][node], targetVelocity[ch][node]);
 						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord[ch][node], modeOfOperation);
 
-						controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
-						controlWord[ch][node] |= 0x00; // clear all operation mode specific bits
+						if (GetHomingDone() == HOMING_DONE &&
+							(controlWord[ch][node]&0x0010) != 0) { // when "Set new point" bit is set...
+							controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
+							controlWord[ch][node] |= 0x00; // clear all operation mode specific bits
+						}
 					}
 				}
 				
@@ -241,10 +248,6 @@ void MainLoop()
 				}
 				break;
 			
-			case '5': // testing incremental position control
-				SetTargetPosition();
-				break;
-
 			case '1':
 				SetModeOfOperation();
 				break;
@@ -265,28 +268,47 @@ void MainLoop()
 				Shutdown();
 				break;
 
-			case 'h': case 'H':
-				StartHoming();
-				break;
+			default:
+				{ 
+					//
+					// process motion command:
+					//
+					if (GetHomingDone() != HOMING_DONE) {
+						printf("Cannot process a motion command. Homing has not been done yet!\n");
+						break;
+					}
 
-			case 'z': case 'Z':
-				MotionStretch();
-				break;
+					switch (c)
+					{
+					case 'h': case 'H':
+						StartHoming();
+						break;
 
-			case 'd': case 'D':
-				MotionSquat();
-				break;
+					case 'z': case 'Z':
+						MotionStretch();
+						break;
 
-			case 'r': case 'R':
-				MotionWalkReady();
-				break;
+					case 'd': case 'D':
+						MotionSquat();
+						break;
 
-			case 'w': case 'W':
-				MotionWalk();
-				break;
+					case 'r': case 'R':
+						MotionWalkReady();
+						break;
 
-			case 'e': case 'E':
-				EStop();
+					case 'w': case 'W':
+						MotionWalk();
+						break;
+
+					case 'e': case 'E':
+						EStop();
+						break;
+
+					case '5': // testing incremental position control
+						SetTargetPosition();
+						break;
+					}
+				}
 				break;
 			}
 		}
@@ -619,6 +641,59 @@ void StartHoming()
 	
 			controlWord[ch][node] &= 0xFFEF; // masking irrelevant bits
 			controlWord[ch][node] |= 0x10;
+			homingStatus[ch][node] = HOMING_INIT;
+		}
+	}
+}
+
+long GetHomingDone()
+{
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		for (int node = 0; node < NODE_COUNT; node++) 
+		{
+			if (!NODE_Enabled[ch][node]) continue;
+	
+			if (homingStatus[ch][node] != HOMING_DONE)
+				return homingStatus[ch][node];
+		}
+	}
+	return HOMING_DONE;
+}
+
+void UpdateStatus(int ch, unsigned char node_id, unsigned short status_word)
+{
+	if (!CAN_Ch_Enabled[ch]) return;
+	for (int i=0; i<LEG_JDOF; i++)
+	{
+		if (!NODE_Enabled[ch][i]) continue;
+
+		if (JointNodeID[ch][i] == node_id)
+		{
+			statusWord[ch][i] = status_word;
+
+			// homing is done?
+			if (homingStatus[ch][i] == HOMING_INIT) {
+				if ((statusWord[ch][i] & 0x2000) != 0) {
+					printf("\thoming ERROR (CAN ch=%d, node id=%d)\n", ch, node_id);
+					homingStatus[ch][i] = HOMING_ERROR;
+					controlWord[ch][i] &= 0xFEEF; // masking irrelevant bits
+					controlWord[ch][i] |= 0x0100; // clear all operation mode specific bits and set Halt bit on
+				}
+				else if ((statusWord[ch][i] & 0x1000) != 0) {
+					printf("\thoming done (CAN ch=%d, node id=%d)\n", ch, node_id);
+					homingStatus[ch][i] = HOMING_DONE;
+					controlWord[ch][i] &= 0xFFEF; // masking irrelevant bits
+					controlWord[ch][i] |= 0x00; // clear all operation mode specific bits
+
+					if (GetHomingDone() == HOMING_DONE) {
+						printf("HOMING for all joints has been completed!\n");
+					}
+				}
+			}
+
+			return;
 		}
 	}
 }
@@ -682,7 +757,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	memset(statusWord, 0, LEG_COUNT*LEG_JDOF*sizeof(statusWord[0][0]));
 	memset(targetPosition, 0, LEG_COUNT*LEG_JDOF*sizeof(targetPosition[0][0]));
 	memset(targetVelocity, 0, LEG_COUNT*LEG_JDOF*sizeof(targetVelocity[0][0]));
+	memset(motionStatus, 0, LEG_COUNT*LEG_JDOF*sizeof(motionStatus[0][0]));
 	memset(homingStatus, 0, LEG_COUNT*LEG_JDOF*sizeof(homingStatus[0][0]));
+	for (int ch = 0; ch < CAN_Ch_COUNT; ch++) {
+		for (int node = 0; node < NODE_COUNT; node++)  {
+			if (node == 0) homingStatus[ch][node] = HOMING_DONE;
+			else homingStatus[ch][node] = HOMING_NONE;
+		}
+	}
 
 	// open CAN channel:
 	if (!OpenCAN())
