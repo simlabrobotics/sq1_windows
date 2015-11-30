@@ -130,9 +130,16 @@ void ProcessCANMessage(int index)
 
 		case COBTYPE_TxPDO1:
 			{
-				UpdateStatus(index, node_id, MAKEWORD(data[0], data[1]));
-				printf("\tTxPDO1[node=%d]: ", node_id);
-				printf("status word = ");
+				UpdateStatus(index, node_id, MAKEWORD(data[4], data[5]));
+				printf("\tTxPDO1[node=%d]\n", node_id);
+				printf("\t\tstatus word = ");
+				printBinary(data[5]);
+				printf(" ");
+				printBinary(data[4]);
+				printf("b\n");
+				printf("\t\tDI = ");
+				printBinary(data[2]);
+				printf(" ");
 				printBinary(data[1]);
 				printf(" ");
 				printBinary(data[0]);
@@ -159,18 +166,12 @@ void ProcessCANMessage(int index)
 			break;
 		case COBTYPE_TxPDO3:
 			{
-				long enc_counter = MAKELONG(MAKEWORD(data[0], data[1]), MAKEWORD(data[2], data[3]));
+				long enc_counter;
 				printf("\tTxPDO3[node=%d]\n", node_id);
-				printf("\t\tposition = %.1f (deg) / %d (count)\n", COUNT2DEG(enc_counter), enc_counter);
-				printf("\t\tDI = ");
-				printBinary(data[6]);
-				printf(" ");
-				printBinary(data[5]);
-				printf(" ");
-				printBinary(data[4]);
-				/*printf(" ");
-				printBinary(data[4]);*/
-				printf("b\n");
+				enc_counter = MAKELONG(MAKEWORD(data[0], data[1]), MAKEWORD(data[2], data[3]));
+				printf("\t\tdemand position = %.1f (deg) / %d (count)\n", COUNT2DEG(enc_counter), enc_counter);
+				enc_counter = MAKELONG(MAKEWORD(data[4], data[5]), MAKEWORD(data[6], data[7]));
+				printf("\t\tactual position = %.1f (deg) / %d (count)\n", COUNT2DEG(enc_counter), enc_counter);
 			}
 			break;
 		case COBTYPE_TxPDO4:

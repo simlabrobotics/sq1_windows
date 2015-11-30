@@ -1009,7 +1009,16 @@ int can_map_txpdo1(int ch, unsigned char node_id)
 	err = can_sdo_download(ch, node_id, OD_TxPDO1_MAPPING, 0, buf, buf_len);
 	if (err) return err;
 
-	// map status word as the 1st 2 bytes of the PDO:
+	// map digital input as the first 4 bytes of the PDO:
+	buf[0] = 32;
+	buf[1] = 0;
+	buf[2] = LOBYTE(OD_DIGITAL_INPUT);
+	buf[3] = HIBYTE(OD_DIGITAL_INPUT);
+	buf_len = 4;
+	err = can_sdo_download(ch, node_id, OD_TxPDO1_MAPPING, (++entry_num), buf, buf_len);
+	if (err) return err;
+
+	// map status word as the next 2 bytes of the PDO:
 	buf[0] = 16;
 	buf[1] = 0;
 	buf[2] = LOBYTE(OD_STATUSWORD);
@@ -1065,20 +1074,20 @@ int can_map_txpdo3(int ch, unsigned char node_id)
 	err = can_sdo_download(ch, node_id, OD_TxPDO3_MAPPING, 0, buf, buf_len);
 	if (err) return err;
 
-	// map position actual value as the 1st 4 bytes of the PDO:
+	// map position demand value as the 1st 4 bytes of the PDO:
 	buf[0] = 32;
 	buf[1] = 0;
-	buf[2] = LOBYTE(OD_POSITION_ACTUAL_VALUE);
-	buf[3] = HIBYTE(OD_POSITION_ACTUAL_VALUE);
+	buf[2] = LOBYTE(OD_POSITION_DEMAND_VALUE);
+	buf[3] = HIBYTE(OD_POSITION_DEMAND_VALUE);
 	buf_len = 4;
 	err = can_sdo_download(ch, node_id, OD_TxPDO3_MAPPING, (++entry_num), buf, buf_len);
 	if (err) return err;
 
-	// map digital input as the first 4 bytes of the PDO:
+	// map position actual value as the next 4 bytes of the PDO:
 	buf[0] = 32;
 	buf[1] = 0;
-	buf[2] = LOBYTE(OD_DIGITAL_INPUT);
-	buf[3] = HIBYTE(OD_DIGITAL_INPUT);
+	buf[2] = LOBYTE(OD_POSITION_ACTUAL_VALUE);
+	buf[3] = HIBYTE(OD_POSITION_ACTUAL_VALUE);
 	buf_len = 4;
 	err = can_sdo_download(ch, node_id, OD_TxPDO3_MAPPING, (++entry_num), buf, buf_len);
 	if (err) return err;
