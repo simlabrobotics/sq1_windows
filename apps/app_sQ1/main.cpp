@@ -209,14 +209,9 @@ void MainLoop()
 	{
 		if (!_kbhit())
 		{
-			for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
-			{
-				if (!CAN_Ch_Enabled[ch]) continue;
-				ProcessCANMessage(ch);
-			}
-			Sleep(5);
 			sync_counter++;
-			if (sync_counter == 100) {
+
+			if (sync_counter == 1) {
 				
 				for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 				{
@@ -224,14 +219,16 @@ void MainLoop()
 					for (int node = 0; node < NODE_COUNT; node++)
 					{
 						if (!NODE_Enabled[ch][node]) continue;
-						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition[ch][node], targetVelocity[ch][node]);
-						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord[ch][node], modeOfOperation);
 
 						if (GetHomingDone() == HOMING_DONE &&
+							(statusWord[ch][node]&0x1000) != 0 &&
 							(controlWord[ch][node]&0x0010) != 0) { // when "Set new point" bit is set...
-							controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
-							controlWord[ch][node] |= 0x00; // clear all operation mode specific bits
+							controlWord[ch][node] &= 0xDF8F; // masking irrelevant bits
+							controlWord[ch][node] |= 0x0000; // clear all operation mode specific bits
 						}
+						
+						can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition[ch][node], targetVelocity[ch][node]);
+						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord[ch][node], modeOfOperation);
 					}
 				}
 				
@@ -242,6 +239,14 @@ void MainLoop()
 				}
 
 				sync_counter = 0;
+			}
+
+			Sleep(10);
+
+			for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+			{
+				if (!CAN_Ch_Enabled[ch]) continue;
+				ProcessCANMessage(ch);
 			}
 		}
 		else
@@ -734,9 +739,9 @@ void SetTargetPosition()
 			targetPosition[ch][node] = DEG2COUNT(5);
 			targetVelocity[ch][node] = DEG2COUNT(10);
 
-			controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
+			controlWord[ch][node] &= 0xDF8F; // masking irrelevant bits
 			//controlWord[ch][node] |= 0x2070; // set new point, target position is relative
-			controlWord[ch][node] |= 0x0070; // set new point, target position is relative
+			controlWord[ch][node] |= 0x2070; // set new point, target position is relative
 		}
 	}	
 }
@@ -756,8 +761,8 @@ void MotionZero()
 			targetPosition[ch][node] = DEG2COUNT(0);
 			targetVelocity[ch][node] = DEG2COUNT(10);
 
-			controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
-			controlWord[ch][node] |= 0x0030; // set new point, target position is absolute
+			controlWord[ch][node] &= 0xDF8F; // masking irrelevant bits
+			controlWord[ch][node] |= 0x2030; // set new point, target position is absolute
 		}
 	}
 }
@@ -765,10 +770,10 @@ void MotionZero()
 void MotionStretch()
 {
 	static const unsigned long target_velocity[LEG_COUNT][LEG_JDOF] = {
-		{DEG2COUNT(10), DEG2COUNT(20), DEG2COUNT(40)},
-		{DEG2COUNT(10), DEG2COUNT(20), DEG2COUNT(40)},
-		{DEG2COUNT(10), DEG2COUNT(20), DEG2COUNT(40)},
-		{DEG2COUNT(10), DEG2COUNT(20), DEG2COUNT(40)}
+		{DEG2COUNT(0), DEG2COUNT(20), DEG2COUNT(40)},
+		{DEG2COUNT(0), DEG2COUNT(20), DEG2COUNT(40)},
+		{DEG2COUNT(0), DEG2COUNT(20), DEG2COUNT(40)},
+		{DEG2COUNT(0), DEG2COUNT(20), DEG2COUNT(40)}
 	};
 
 	printf("move to STRETCH position...\n");
@@ -782,8 +787,8 @@ void MotionStretch()
 			targetPosition[ch][node] = DEG2COUNT(0);
 			targetVelocity[ch][node] = target_velocity[ch][node];
 
-			controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
-			controlWord[ch][node] |= 0x0030; // set new point, target position is absolute
+			controlWord[ch][node] &= 0xDF8F; // masking irrelevant bits
+			controlWord[ch][node] |= 0x2030; // set new point, target position is absolute
 		}
 	}
 }
@@ -791,16 +796,16 @@ void MotionStretch()
 void MotionSquat()
 {
 	static const long target_position[LEG_COUNT][LEG_JDOF] = {
-		{DEG2COUNT(10), -DEG2COUNT(30), -DEG2COUNT(60)},
-		{DEG2COUNT(10),  DEG2COUNT(30),  DEG2COUNT(60)},
-		{DEG2COUNT(10),  DEG2COUNT(30),  DEG2COUNT(60)},
-		{DEG2COUNT(10), -DEG2COUNT(30), -DEG2COUNT(60)}
+		{DEG2COUNT(0), -DEG2COUNT(30), -DEG2COUNT(60)},
+		{DEG2COUNT(0),  DEG2COUNT(30),  DEG2COUNT(60)},
+		{DEG2COUNT(0), -DEG2COUNT(30), -DEG2COUNT(60)},
+		{DEG2COUNT(0),  DEG2COUNT(30),  DEG2COUNT(60)}
 	};
 	static const unsigned long target_velocity[LEG_COUNT][LEG_JDOF] = {
-		{DEG2COUNT(10), DEG2COUNT(20), DEG2COUNT(40)},
-		{DEG2COUNT(10), DEG2COUNT(20), DEG2COUNT(40)},
-		{DEG2COUNT(10), DEG2COUNT(20), DEG2COUNT(40)},
-		{DEG2COUNT(10), DEG2COUNT(20), DEG2COUNT(40)}
+		{DEG2COUNT(0), DEG2COUNT(20), DEG2COUNT(40)},
+		{DEG2COUNT(0), DEG2COUNT(20), DEG2COUNT(40)},
+		{DEG2COUNT(0), DEG2COUNT(20), DEG2COUNT(40)},
+		{DEG2COUNT(0), DEG2COUNT(20), DEG2COUNT(40)}
 	};
 
 	printf("move to SQUAT position...\n");
@@ -814,8 +819,8 @@ void MotionSquat()
 			targetPosition[ch][node] = target_position[ch][node];
 			targetVelocity[ch][node] = target_velocity[ch][node];
 
-			controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
-			controlWord[ch][node] |= 0x0030; // set new point, target position is absolute
+			controlWord[ch][node] &= 0xDF8F; // masking irrelevant bits
+			controlWord[ch][node] |= 0x2030; // set new point, target position is absolute
 		}
 	}
 }

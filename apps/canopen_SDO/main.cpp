@@ -319,6 +319,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		// query motion profile:
 		printf("query motion profile...\n");
 		can_dump_motion_profile(CAN_Ch, NODE_ID[node_index]);
+
+		// query emergency events:
+		printf("query emergency events...\n");
+		can_query_emergency_events(CAN_Ch, NODE_ID[node_index]);
 	}
 
 	// loop wait user input:

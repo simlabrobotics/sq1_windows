@@ -195,14 +195,9 @@ void MainLoop()
 	{
 		if (!_kbhit())
 		{
-			for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
-			{
-				if (!CAN_Ch_Enabled[ch]) continue;
-				ProcessCANMessage(ch);
-			}
-			Sleep(5);
 			sync_counter++;
-			if (sync_counter == 100) {
+
+			if (sync_counter == 1) {
 				
 				for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
 				{
@@ -210,10 +205,11 @@ void MainLoop()
 					for (int node = 0; node < NODE_COUNT; node++)
 					{
 						if (!NODE_Enabled[ch][node]) continue;
-						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord[ch][node], modeOfOperation);
 
-//						controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
-//						controlWord[ch][node] |= 0x00; // clear all operation mode specific bits
+//						controlWord[ch][node] &= 0xDF8F; // masking irrelevant bits
+//						controlWord[ch][node] |= 0x0000; // clear all operation mode specific bits
+
+						can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord[ch][node], modeOfOperation);
 					}
 				}
 
@@ -224,6 +220,14 @@ void MainLoop()
 				}
 
 				sync_counter = 0;
+			}
+
+			Sleep(10);
+
+			for (int ch = 0; ch < CAN_Ch_COUNT; ch++)
+			{
+				if (!CAN_Ch_Enabled[ch]) continue;
+				ProcessCANMessage(ch);
 			}
 		}
 		else

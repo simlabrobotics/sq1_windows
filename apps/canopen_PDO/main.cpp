@@ -98,13 +98,13 @@ void MainLoop()
 	{
 		if (!_kbhit())
 		{
-			ProcessCANMessage();
-			Sleep(5);
 			sync_counter++;
 			if (sync_counter == 100) {
 				can_sync(CAN_Ch);
 				sync_counter = 0;
 			}
+			Sleep(5);
+			ProcessCANMessage();
 		}
 		else
 		{

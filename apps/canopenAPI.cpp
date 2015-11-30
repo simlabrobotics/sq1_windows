@@ -841,6 +841,25 @@ int can_query_drive_modes(int ch, unsigned char node_id)
 	return err;
 }
 
+int can_query_emergency_events(int ch, unsigned char node_id)
+{
+	int err;
+	unsigned char buf[256];
+	unsigned short buf_len = 256;
+	
+	err = can_sdo_upload(ch, node_id, OD_EMERGENCY_EVENT, 0, buf, buf_len);
+#ifdef CAN_PRINT_SDO_RESPONSE
+	if (!err) {
+		printf("\temergency events = ");
+		printBinary(buf[1]);
+		printf(" ");
+		printBinary(buf[0]);
+		printf("b\n");
+	}
+#endif
+	return err;
+}
+
 int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len)
 {
 	/*assert(ch >= 0 && ch < MAX_BUS);
@@ -1077,8 +1096,8 @@ int can_map_txpdo3(int ch, unsigned char node_id)
 	// map position demand value as the 1st 4 bytes of the PDO:
 	buf[0] = 32;
 	buf[1] = 0;
-	buf[2] = LOBYTE(OD_POSITION_DEMAND_VALUE);
-	buf[3] = HIBYTE(OD_POSITION_DEMAND_VALUE);
+	buf[2] = LOBYTE(OD_PROFILED_TARGET_POSITION/*OD_POSITION_DEMAND_VALUE*/);
+	buf[3] = HIBYTE(OD_PROFILED_TARGET_POSITION/*OD_POSITION_DEMAND_VALUE*/);
 	buf_len = 4;
 	err = can_sdo_download(ch, node_id, OD_TxPDO3_MAPPING, (++entry_num), buf, buf_len);
 	if (err) return err;
@@ -1154,7 +1173,7 @@ int can_map_rxpdo1(int ch, unsigned char node_id)
 	if (err) return err;
 
 	// set transmission type in PDO communication parameters to "Transmit every SYNC":
-	buf[0] = 1;
+	buf[0] = 0xFF;
 	buf[1] = 0x00;
 	buf[2] = 0x00;
 	buf[3] = 0x00;
@@ -1219,7 +1238,7 @@ int can_map_rxpdo3(int ch, unsigned char node_id)
 	if (err) return err;
 
 	// set transmission type in PDO communication parameters to "Transmit every SYNC":
-	buf[0] = 1;
+	buf[0] = 0xFF;
 	buf[1] = 0x00;
 	buf[2] = 0x00;
 	buf[3] = 0x00;
@@ -1357,8 +1376,8 @@ int can_pdo_set_target_position(int ch, unsigned char node_id, int target_positi
 	unsigned char data[8];
 	unsigned char len = 8;
 	unsigned short control_word_old = control_word;
-	control_word &= 0xFF8F; // masking irrelevant bits
-	control_word |= 0x50; // set new point, target position is relative
+	control_word &= 0xDF8F; // masking irrelevant bits
+	control_word |= 0x2050; // set new point, target position is relative
 
 	data[0] = LOBYTE(LOWORD(target_position));
 	data[1] = HIBYTE(LOWORD(target_position));
@@ -1481,8 +1500,8 @@ int can_set_target_position(int ch, unsigned char node_id, int target_position, 
 	if (err) return err;
 
 	control_word_old = control_word;
-	control_word &= 0xFF8F; // masking irrelevant bits
-	control_word |= 0x50; // set new point, target position is relative
+	control_word &= 0xDF8F; // masking irrelevant bits
+	control_word |= 0x2050; // set new point, target position is relative
 	buf[0] = LOBYTE(control_word);
 	buf[1] = HIBYTE(control_word);
 	buf_len = 2;

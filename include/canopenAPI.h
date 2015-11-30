@@ -61,6 +61,7 @@ int can_query_control_word(int ch, unsigned char node_id);
 int can_query_status_word(int ch, unsigned char node_id);
 int can_query_mode_of_operation_display(int ch, unsigned char node_id);
 int can_query_drive_modes(int ch, unsigned char node_id);
+int can_query_emergency_events(int ch, unsigned char node_id);
 
 // Binary interpreter:
 int can_bin_interprete(int ch, unsigned char node_id, unsigned char* buf, unsigned short buf_len);

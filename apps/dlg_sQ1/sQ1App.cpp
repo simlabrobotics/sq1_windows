@@ -311,7 +311,6 @@ bool sQ1App::OnInit()
 	sq1::DriveReset();
 	sq1::DriveInit();
 
-	
 
 	wxInitAllImageHandlers();
 
@@ -327,6 +326,8 @@ bool sQ1App::OnInit()
 	pFrame->Show(true);
 	SetTopWindow(pFrame);
 	
+	Connect( wxID_ANY, wxEVT_IDLE, wxIdleEventHandler(sQ1App::OnIdle) );
+
 	return true;
 };
 
@@ -334,30 +335,27 @@ void sQ1App::OnIdle(wxIdleEvent& evt)
 {
 	static int sync_counter = 0;
 
-
-	for (int ch = 0; ch < (int)CAN_Ch_COUNT; ch++)
-	{
-		if (!CAN_Ch_Enabled[ch]) continue;
-		ProcessCANMessage(ch);
-	}
-	//Sleep(5);
 	sync_counter++;
-	if (sync_counter == 100) {
+
+	if (sync_counter == 1) {
 				
 		for (int ch = 0; ch < (int)CAN_Ch_COUNT; ch++)
 		{
 			if (!CAN_Ch_Enabled[ch]) continue;
+
 			for (int node = 0; node < (int)NODE_COUNT; node++)
 			{
 				if (!NODE_Enabled[ch][node]) continue;
-				can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition[ch][node], targetVelocity[ch][node]);
-				can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord[ch][node], modeOfOperation);
 
 				if (GetHomingDone() == HOMING_DONE &&
+					(statusWord[ch][node]&0x1000) != 0 &&
 					(controlWord[ch][node]&0x0010) != 0) { // when "Set new point" bit is set...
-					controlWord[ch][node] &= 0xFF8F; // masking irrelevant bits
-					controlWord[ch][node] |= 0x00; // clear all operation mode specific bits
+					controlWord[ch][node] &= 0xDF8F; // masking irrelevant bits
+					controlWord[ch][node] |= 0x0000; // clear all operation mode specific bits
 				}
+
+				can_pdo_rx1(CAN_Ch[ch], JointNodeID[ch][node], targetPosition[ch][node], targetVelocity[ch][node]);
+				can_pdo_rx3(CAN_Ch[ch], JointNodeID[ch][node], controlWord[ch][node], modeOfOperation);
 			}
 		}
 				
@@ -368,6 +366,14 @@ void sQ1App::OnIdle(wxIdleEvent& evt)
 		}
 
 		sync_counter = 0;
+	}
+
+	Sleep(5);
+
+	for (int ch = 0; ch < (int)CAN_Ch_COUNT; ch++)
+	{
+		if (!CAN_Ch_Enabled[ch]) continue;
+		ProcessCANMessage(ch);
 	}
 
 	evt.RequestMore(); // render continuously, not only once on idle
