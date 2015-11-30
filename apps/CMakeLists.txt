@@ -16,7 +16,6 @@ if( CAN_PRINT_DIAGNOSIS )
 	add_definitions( -DCAN_PRINT_DIAGNOSIS )
 endif()
 
-
 # Add demo applications:
 if( BUILD_CAN_SAMPLES )
 	add_subdirectory( canopen_PDO )
@@ -30,3 +29,7 @@ if( BUILD_APPS )
 	add_subdirectory( app_sQ1 )
 endif()
 
+find_package( wxWidgets COMPONENTS base gl core adv aui )
+if( wxWidgets_FOUND AND BUILD_APPS )
+	add_subdirectory( dlg_sQ1 )
+endif()

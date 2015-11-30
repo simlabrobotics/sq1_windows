@@ -18,26 +18,26 @@
 #include "sq1_mem.h"
 #include "sq1_PDO.h"
 
-USING_NAMESPACE_SQ1
+NAMESPACE_SQ1_BEGIN
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // for CAN communication
 const double delT = 0.005;
-const unsigned int CAN_Ch_COUNT = LEG_COUNT;
-const unsigned int NODE_COUNT = LEG_JDOF;
-int CAN_Ch[CAN_Ch_COUNT] = {0, 0, 0, 0};
-const bool CAN_Ch_Enabled[CAN_Ch_COUNT] = {true, true, true, true};
-const bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
+unsigned int CAN_Ch_COUNT = LEG_COUNT;
+unsigned int NODE_COUNT = LEG_JDOF;
+int CAN_Ch[LEG_COUNT] = {0, 0, 0, 0};
+bool CAN_Ch_Enabled[LEG_COUNT] = {true, false, false, false};
+bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
 	{true, true, true},
 	{true, true, true},
 	{true, true, true},
 	{true, true, true}
 };
-bool ioThreadRun[CAN_Ch_COUNT] = {false, false, false, false};
-uintptr_t ioThread[CAN_Ch_COUNT] = {0, 0, 0, 0};
-int recvNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
-int sendNum[CAN_Ch_COUNT] = {0, 0, 0, 0};
-double statTime[CAN_Ch_COUNT] = {-1.0, -1.0, -1.0, -1.0};
+bool ioThreadRun[LEG_COUNT] = {false, false, false, false};
+uintptr_t ioThread[LEG_COUNT] = {0, 0, 0, 0};
+int recvNum[LEG_COUNT] = {0, 0, 0, 0};
+int sendNum[LEG_COUNT] = {0, 0, 0, 0};
+double statTime[LEG_COUNT] = {-1.0, -1.0, -1.0, -1.0};
 sQ1_RobotMemory_t vars;
 long targetPosition[LEG_COUNT][LEG_JDOF];
 unsigned long targetVelocity[LEG_COUNT][LEG_JDOF];
@@ -555,7 +555,6 @@ void InitVariables()
 	}
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////
 // device control:
 void SetModeOfOperation()
@@ -838,7 +837,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!OpenCAN())
 		return -1;
 
-	DriveReset();
+//	DriveReset();
 	DriveInit();
 
 	// start periodic communication:
@@ -871,3 +870,5 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	return 0;
 }
+
+NAMESPACE_SQ1_END

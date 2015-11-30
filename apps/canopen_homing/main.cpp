@@ -650,7 +650,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!OpenCAN())
 		return -1;
 
-//	DriveReset();
+	DriveReset();
 	DriveInit();
 
 	// start periodic communication:
