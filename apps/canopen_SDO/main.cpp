@@ -20,7 +20,7 @@
 const double delT = 0.005;
 int CAN_Ch = 0;
 const unsigned int NODE_COUNT = 3;
-unsigned char NODE_ID[NODE_COUNT] = {0x07, 0x08, 0x09};
+unsigned char NODE_ID[NODE_COUNT] = {0x0A, 0x0B, 0x0C};
 int recvNum = 0;
 int sendNum = 0;
 double statTime = -1.0;
@@ -173,7 +173,7 @@ bool OpenCAN()
 	int ret;
 	
 #if defined(PeakCAN)
-	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS3");
+	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS4");
 #elif defined(IXXATCAN)
 	CAN_Ch = 1;
 #elif defined(SOFTINGCAN)
