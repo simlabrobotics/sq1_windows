@@ -113,6 +113,9 @@ set(all_${name}_srcs
 	${${name}_srcs}
 	"sQ1App.cpp"
 	"sQ1App.h"
+	"sQ1MainFrame.cpp"
+	"sQ1MainFrame.h"
+	"sQ1Resource.h"
 	"sQ1CANImpl.cpp"
 	"sQ1CANImpl.h"
 	)

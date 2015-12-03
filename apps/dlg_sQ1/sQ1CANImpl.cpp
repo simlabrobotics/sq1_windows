@@ -26,7 +26,7 @@ const double delT = 0.005;
 unsigned int CAN_Ch_COUNT = LEG_COUNT;
 unsigned int NODE_COUNT = LEG_JDOF;
 int CAN_Ch[LEG_COUNT] = {0, 0, 0, 0};
-bool CAN_Ch_Enabled[LEG_COUNT] = {true, true, true, true};
+bool CAN_Ch_Enabled[LEG_COUNT] = {false, false, false, false};
 bool NODE_Enabled[LEG_COUNT][LEG_JDOF] = {
 	{true, true, true},
 	{true, true, true},
