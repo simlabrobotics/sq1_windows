@@ -352,19 +352,14 @@ bool OpenCAN()
 	CAN_Ch[3] = getPCANChannelIndex("PCAN_PCIBUS4");
 #elif defined(IXXATCAN) || defined(SOFTINGCAN)
 	CAN_Ch[0] = 1;
-	CAN_Ch[1] = 1;
-	CAN_Ch[2] = 1;
-	CAN_Ch[3] = 1;
-#elif defined(NICAN)
+	CAN_Ch[1] = 2;
+	CAN_Ch[2] = 3;
+	CAN_Ch[3] = 4;
+#else defined(NICAN) || defined(ESDCAN)
 	CAN_Ch[0] = 0;
 	CAN_Ch[1] = 1;
 	CAN_Ch[2] = 2;
 	CAN_Ch[3] = 3;
-#else
-	CAN_Ch[0] = 1;
-	CAN_Ch[1] = 2;
-	CAN_Ch[2] = 3;
-	CAN_Ch[3] = 4;
 #endif
 
 	for (int ch = 0; ch < CAN_Ch_COUNT; ch++) {

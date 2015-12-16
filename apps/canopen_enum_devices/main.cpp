@@ -85,17 +85,13 @@ void MainLoop()
 bool OpenCAN()
 {
 	int ret;
-	
+
 #if defined(PeakCAN)
 	CAN_Ch = getPCANChannelIndex("PCAN_PCIBUS1");
-#elif defined(IXXATCAN)
+#elif defined(IXXATCAN) || defined(SOFTINGCAN)
 	CAN_Ch = 1;
-#elif defined(SOFTINGCAN)
-	CAN_Ch = 1;
-#elif defined(NICAN)
-	CAN_Ch = 0;
 #else
-	CAN_Ch = 1;
+	CAN_Ch = 0;
 #endif
 
 	printf(">CAN(%d): open\n", CAN_Ch);
